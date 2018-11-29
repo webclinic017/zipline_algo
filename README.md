@@ -7,3 +7,4 @@
 5. ingest data using "zipline ingest -b quandl"
 6. pip install quandl
 7. download quandl loader from http://alphacompiler.com/blog/6/
+8. copy NASDAQ_sids.npy and SF!.npy to ..envs\zipline\Lib\site-packages\alphacompiler\data or load data using alphacompiler (link in step 7)
