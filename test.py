@@ -20,6 +20,7 @@ from zipline.pipeline.factors import RSI
 
 ONE_THIRD = 1.0 / 3.0
 
+
 def make_pipeline():
     rsi = RSI()
     fd = Fundamentals()
@@ -30,7 +31,7 @@ def make_pipeline():
             'longs': rsi.top(3),
             'shorts': rsi.bottom(3),
             'ROE': fd.marketcap,
-            #'CAPEX': fd.CAPEX_MRQ,
+            # 'CAPEX': fd.CAPEX_MRQ,
             # 'sector': sectors,
         },
     )
@@ -74,12 +75,14 @@ def initialize(context):
     # `rebalance` in our handle_data, but in minute mode, it's equivalent to
     # running at the start of the day each day.
 
+
 def before_trading_start(context, data):
     # schedule_function(rebalance, date_rules.every_day())
     context.pipeline_data = pipeline_output('my_pipeline')
 
+
 if __name__ == '__main__':
-    start_date = '20110131'
+    start_date = '20080101'
     start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
 
     end_date = '20121231'
