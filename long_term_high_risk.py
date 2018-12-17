@@ -4,18 +4,31 @@ from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
 from zipline.api import (
+
+    get_datetime,
     attach_pipeline,
     order_target_percent,
     symbol,
     pipeline_output,
     record,
     schedule_function,
+    get_environment,
 )
 import datetime
 import matplotlib.pyplot as plt
-from utils.plot_util import plot_header, plot_performance, plot_portfolio_value
-from zipline.utils.events import date_rules
+from utils.plot_util import (
+    plot_header,
+    plot_performance,
+    plot_portfolio_value,
+    plot_returns,
+    plot_drawdown,
+    plot_positions_leverage,
+    plot_relative_strength,
+    get_benchmark_returns
+)
 
+from zipline.utils.events import date_rules, time_rules
+import numpy as np
 current_year = None
 
 # stop loss non addition limit set to 5 days
@@ -23,6 +36,17 @@ stop_loss_prevention_days = 15
 
 
 def initialize(context):
+    # prev day securities
+    context.prev_long_univ = pd.DataFrame()
+    context.long_univ_returns = 0
+    context.advance_decline = 0
+
+    context.long_market_env = 0
+    context.hitrate_latest = 0
+    context.num_pos_residuals = 0
+
+    context.market_exposure_df = None
+
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
 
@@ -36,6 +60,38 @@ def initialize(context):
         date_rule=date_rules.month_start()
     )
 
+    # set up dataframe to record equity with loan value history
+    port_history = pd.DataFrame(np.empty(0, dtype=[
+        ('date', 'datetime64[ns]'),
+        ('portfolio_net', 'float'),
+        ('returns', 'float'),
+        ('long_univ_returns', 'float'),
+        ('hitrate', float),
+        ('algodd', 'float'),
+        ('univdd', 'float'),
+        ('benchmarkdd', 'float'),
+        ('leverage', 'int'),
+        ('num_pos', 'int'),
+        ('univ_len', 'int'),
+        ('advance_decline', 'int'),
+        ('num_pos_residuals', 'int'),
+        ('advance_decline_std', 'float'),
+        ('univ_rs', 'float')
+    ]))
+    port_history.set_index('date')
+    context.port_history = port_history
+
+    # record variables every day after market close
+    schedule_function(recordvars,
+                      date_rule=date_rules.every_day(),
+                      time_rule=time_rules.market_close())
+
+    fig, ax = plt.subplots(figsize=(10, 5), nrows=2, ncols=2)
+    fig.tight_layout()
+    fig.show()
+    fig.canvas.draw()
+    context.ax = ax
+    context.fig = fig
 
 def make_pipeline():
     fd = Fundamentals()
@@ -57,6 +113,76 @@ def make_pipeline():
             'sector': sectors
         },
     )
+
+def recordvars(context, data):
+    date = get_datetime()
+    port_history = context.port_history
+
+    portfolio_net = context.account.equity_with_loan
+    num_pos = len(context.portfolio.positions)
+    leverage = context.account.leverage
+    today_long_univ_return = context.long_univ_returns
+    hr = context.hitrate_latest
+    advance_decline = context.advance_decline
+
+    port_history.set_value(date, 'portfolio_net',portfolio_net)
+    port_history.set_value(date, 'long_univ_returns', today_long_univ_return)
+    port_history.set_value(date, 'leverage', leverage)
+    port_history.set_value(date, 'num_pos', num_pos)
+    port_history.set_value(date, 'univ_len', len(context.prev_long_univ))
+    port_history.set_value(date, 'hitrate', hr)
+    # num of positions in univ and not in portfolio
+    port_history.set_value(date, 'num_pos_residuals',context.num_pos_residuals)
+    port_history.set_value(date, 'advance_decline', advance_decline)
+
+    advance_decline_std = port_history['advance_decline'][-63:].std()
+    port_history.set_value(date, 'advance_decline_std', advance_decline_std)
+
+    today_return = port_history['portfolio_net'][-2:].pct_change().fillna(0)[-1]
+    port_history.set_value(date, 'returns', today_return)
+
+    max_net = port_history['portfolio_net'].max()
+    algodd = min(0, 100 * (portfolio_net - max_net) / max_net)
+    port_history.set_value(date, 'algodd', algodd)
+
+    long_univ_returns = port_history['long_univ_returns']
+
+    algo_returns_cum = 100 * ((1 + port_history['returns']).cumprod() - 1)
+    long_univ_returns_cum = 100 * ((1 + long_univ_returns).cumprod() - 1)
+
+    univdd = min(0, 100 * (((long_univ_returns_cum[-1]) - max(long_univ_returns_cum)) ) / (100+max(long_univ_returns_cum)))
+    port_history.set_value(date, 'univdd', univdd)
+
+    benchmark_returns = 1 + get_benchmark_returns(context)
+    benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
+    benchmarkdd = min(0, 100 * (((benchmark_returns_cum[-1]) - max(benchmark_returns_cum))) / (100 + max(benchmark_returns_cum)))
+    port_history.set_value(date, 'benchmarkdd', benchmarkdd)
+    if len(long_univ_returns_cum) > 1 :
+        port_history.set_value(date, 'univ_rs', (1 + (long_univ_returns_cum[-1]/100)) / (1+ (benchmark_returns_cum[-1]/100)))
+    else :
+        port_history.set_value(date, 'univ_rs', 1.0)
+
+    record(leverage=leverage, num_pos=num_pos)
+
+    # log.info('Backtest date: ' +  context.datetime.strftime('%Y-%m-%d') + ' Long Univ(' + str(len(context.prev_long_univ)) + ')='
+    #     + '{:.2f}'.format(long_univ_returns_cum[-1]) + ' Algo(' + str(num_pos) + ')=' + '{:.2f}'.format(algo_returns_cum[-1]) + ' DD=' + '{:.2f}'.format(algodd)
+    #     + ' A/D=' + str(advance_decline))
+
+    # if we have more than 1 month history update the equity curve plot
+    if get_environment('arena') == 'backtest' and len(port_history) % 10 == 0:
+        ax = context.ax
+        fig = context.fig
+
+        plot_returns(ax[0, 0], algo_returns_cum,long_univ_returns_cum, benchmark_returns_cum)
+        plot_drawdown(ax[0, 1], port_history['algodd'], port_history['univdd'], port_history['benchmarkdd'])
+        plot_positions_leverage(ax[1, 0], port_history['num_pos'], port_history['univ_len'], port_history['leverage'], port_history['num_pos_residuals'])
+        # plot_exposure(ax[1, 1], port_history['leverage'])
+        plot_relative_strength(ax[1, 1], port_history['univ_rs'])
+        # plot_hitrate(ax[2, 0], port_history['hitrate'])
+        # plot_adline(ax[2, 1], port_history['advance_decline'])
+
+        fig.canvas.draw()  # draw
+        plt.pause(0.01)
 
 
 def before_trading_start(context, data):
