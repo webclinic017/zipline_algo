@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="fc8b4d00-934a-46bc-bc19-9ddb09cb0d6b" name="Default" comment="" />
+    <list default="true" id="fc8b4d00-934a-46bc-bc19-9ddb09cb0d6b" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/long_term_high_risk.py" beforeDir="false" afterPath="$PROJECT_DIR$/long_term_high_risk.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mid_term_high_risk.py" beforeDir="false" afterPath="$PROJECT_DIR$/mid_term_high_risk.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -20,11 +24,20 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="mid_term_high_risk.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="false">
+        <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/algorithm.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="171">
+              <caret line="475" selection-start-line="475" selection-end-line="475" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="mid_term_high_risk.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mid_term_high_risk.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="192">
-              <caret line="206" column="21" selection-start-line="206" selection-start-column="21" selection-end-line="206" selection-end-column="21" />
+            <state relative-caret-position="226">
+              <caret line="35" column="17" selection-start-line="35" selection-start-column="8" selection-end-line="35" selection-end-column="17" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
               </folding>
@@ -32,11 +45,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="long_term_high_risk.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="long_term_high_risk.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/long_term_high_risk.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="140">
-              <caret line="196" selection-start-line="196" selection-end-line="196" />
+            <state relative-caret-position="132">
+              <caret line="330" selection-start-line="330" selection-end-line="330" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
               </folding>
@@ -47,21 +60,16 @@
       <file leaf-file-name="performance.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils/views/performance.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="175">
+            <state relative-caret-position="816">
               <caret line="50" column="61" selection-start-line="50" selection-start-column="54" selection-end-line="50" selection-end-column="61" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="overview.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/utils/views/overview.py">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
       <file leaf-file-name="group_config_box.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils/views/group_config_box.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="51">
+            <state relative-caret-position="34">
               <caret line="3" selection-start-line="3" selection-end-line="3" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
@@ -73,8 +81,8 @@
       <file leaf-file-name="drawdown.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils/views/drawdown.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="8466">
-              <caret line="498" column="29" lean-forward="true" selection-start-line="498" selection-start-column="29" selection-end-line="498" selection-end-column="29" />
+            <state relative-caret-position="8279">
+              <caret line="498" column="29" selection-start-line="498" selection-start-column="29" selection-end-line="498" selection-end-column="29" />
               <folding>
                 <element signature="e#0#16#0" expanded="true" />
               </folding>
@@ -93,8 +101,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>reqHistoricalData</find>
-      <find>TestWrapper</find>
       <find>2011</find>
       <find>my_pipeline</find>
       <find>SF1</find>
@@ -103,7 +109,6 @@
       <find>get_large_cap_symbols</find>
       <find>BENCHMAR</find>
       <find>symbol</find>
-      <find>order_target_percent</find>
       <find>Analyzer</find>
       <find>AnalyzerWindow</find>
       <find>AnalysisData</find>
@@ -117,16 +122,22 @@
       <find>SID_FILE_IPO</find>
       <find>quantopian-quandl</find>
       <find>sector_stocks</find>
-      <find>rebalance</find>
       <find>can_trade</find>
       <find>can</find>
       <find>mean</find>
       <find>reba</find>
       <find>recalc_sector_wise_exposure</find>
+      <find>current_year</find>
+      <find>order_target_percent</find>
+      <find>interested_assets</find>
+      <find>rebalance</find>
     </findStrings>
     <replaceStrings>
       <replace>'quandl'</replace>
     </replaceStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -159,12 +170,12 @@
         <option value="$PROJECT_DIR$/alpha-compiler-master/alphacompiler/data/NASDAQ.py" />
         <option value="$PROJECT_DIR$/alpha-compiler-master/alphacompiler/util/zipline_data_tools.py" />
         <option value="$PROJECT_DIR$/alpha-compiler-master/alphacompiler/data/NASDAQ_sector_code_loader.py" />
-        <option value="$PROJECT_DIR$/long_term_high_risk.py" />
         <option value="$PROJECT_DIR$/mid_term_high_risk.py" />
+        <option value="$PROJECT_DIR$/long_term_high_risk.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="17" />
     <option name="y" value="68" />
     <option name="width" value="1589" />
@@ -175,6 +186,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -191,11 +203,10 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="C:/Anaconda3/envs/zipline_test/Lib/site-packages/alphacompiler/data/sf1_fundamentals.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -215,7 +226,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.mid_term_high_risk">
+  <component name="RunManager" selected="Python.long_term_high_risk">
     <configuration name="1_and_3" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="US-Algo" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -315,8 +326,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.mid_term_high_risk" />
         <item itemvalue="Python.long_term_high_risk" />
+        <item itemvalue="Python.mid_term_high_risk" />
         <item itemvalue="Python.NASDAQ_sector_code_loader" />
         <item itemvalue="Python.load_quandl_sf1" />
         <item itemvalue="Python.1_and_3" />
@@ -337,20 +348,19 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1616" height="876" extended-state="6" />
+    <frame x="-8" y="-8" width="1616" height="876" extended-state="7" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.17680608" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.2260274" side_tool="true" weight="0.3158482" />
       <window_info anchor="bottom" id="GitLabIntegration" order="10" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.23324022" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.32924107" />
-      <window_info anchor="bottom" id="Version Control" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="7" weight="0.32924107" />
       <window_info anchor="bottom" id="Python Console" order="9" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info anchor="bottom" id="Terminal" order="8" />
-      <window_info active="true" anchor="bottom" id="Debug" order="3" sideWeight="0.77397263" visible="true" weight="0.37569833" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.32924107" />
+      <window_info active="true" anchor="bottom" id="Debug" order="3" sideWeight="0.77397263" visible="true" weight="0.33938548" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -358,6 +368,7 @@
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.23324022" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
@@ -418,12 +429,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/long_term_high_risk.py</url>
-          <line>196</line>
+          <line>330</line>
           <option name="timeStamp" value="152" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/mid_term_high_risk.py</url>
-          <line>262</line>
+          <line>271</line>
           <option name="timeStamp" value="201" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -458,32 +469,27 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/long_term_high_risk.py</url>
-          <line>223</line>
+          <line>357</line>
           <option name="timeStamp" value="252" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/mid_term_high_risk.py</url>
-          <line>204</line>
-          <option name="timeStamp" value="253" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/mid_term_high_risk.py</url>
-          <line>202</line>
-          <option name="timeStamp" value="254" />
-        </line-breakpoint>
       </breakpoints>
-      <option name="time" value="255" />
+      <option name="time" value="283" />
     </breakpoint-manager>
   </component>
   <component name="debuggerHistoryManager">
     <expressions id="evaluateExpression">
       <expression>
-        <expression-string>context.portfolio</expression-string>
+        <expression-string>quantity * data.current(stock, 'price')</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
       <expression>
-        <expression-string>context</expression-string>
+        <expression-string>len(position_list)</expression-string>
+        <language-id>Python</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>position_list</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
@@ -498,33 +504,38 @@
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
       <expression>
-        <expression-string>context.sector_wise_exposure.values([0])</expression-string>
-        <language-id>Python</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
-      <expression>
         <expression-string>context.sector_wise_exposure</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
       <expression>
-        <expression-string>context.sector_wise_exposure.values()[0]</expression-string>
+        <expression-string>context.portfolio</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
       <expression>
-        <expression-string>context.sector_wise_exposure.values().sum()</expression-string>
+        <expression-string>sector_wise_exposure</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
       <expression>
-        <expression-string>context.sector_wise_exposure.values().sum)</expression-string>
+        <expression-string>context</expression-string>
         <language-id>Python</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
     </expressions>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/mid_term_high_risk.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3230">
+          <caret line="206" column="21" selection-start-line="206" selection-start-column="21" selection-end-line="206" selection-end-column="21" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/empyrical/stats.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="354">
@@ -634,9 +645,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="170">
           <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
-          <folding>
-            <element signature="e#79#94#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -748,13 +756,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/algorithm.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="171">
-          <caret line="2567" selection-start-line="2567" selection-end-line="2567" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/pipeline/engine.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="154">
@@ -828,13 +829,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/utils/events.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="171">
-          <caret line="234" selection-start-line="234" selection-end-line="234" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/alpha-compiler-master/alphacompiler/examples/pipeline_CAPEX.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="189">
@@ -844,17 +838,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/utils/views/performance.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="175">
+        <state relative-caret-position="816">
           <caret line="50" column="61" selection-start-line="50" selection-start-column="54" selection-end-line="50" selection-end-column="61" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/utils/views/overview.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/utils/views/group_config_box.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="51">
+        <state relative-caret-position="34">
           <caret line="3" selection-start-line="3" selection-end-line="3" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
@@ -864,8 +855,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/utils/views/drawdown.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="8466">
-          <caret line="498" column="29" lean-forward="true" selection-start-line="498" selection-start-column="29" selection-end-line="498" selection-end-column="29" />
+        <state relative-caret-position="8279">
+          <caret line="498" column="29" selection-start-line="498" selection-start-column="29" selection-end-line="498" selection-end-column="29" />
           <folding>
             <element signature="e#0#16#0" expanded="true" />
           </folding>
@@ -879,20 +870,34 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/long_term_high_risk.py">
+    <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/algorithm.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="140">
-          <caret line="196" selection-start-line="196" selection-end-line="196" />
+        <state relative-caret-position="171">
+          <caret line="475" selection-start-line="475" selection-end-line="475" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Anaconda3/envs/zipline_test/Lib/site-packages/zipline/utils/events.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="171">
+          <caret line="234" selection-start-line="234" selection-end-line="234" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mid_term_high_risk.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="226">
+          <caret line="35" column="17" selection-start-line="35" selection-start-column="8" selection-end-line="35" selection-end-column="17" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/mid_term_high_risk.py">
+    <entry file="file://$PROJECT_DIR$/long_term_high_risk.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="192">
-          <caret line="206" column="21" selection-start-line="206" selection-start-column="21" selection-end-line="206" selection-end-column="21" />
+        <state relative-caret-position="132">
+          <caret line="330" selection-start-line="330" selection-end-line="330" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>
