@@ -113,85 +113,37 @@ def plot_params(params):
     plt.figtext(0.01, 0.01, figure_text, backgroundcolor='#eeeeee', size='small')
 
 
-def plot_relative_strength(plt, univ_rs):
-    plt.clear()
-    plt.locator_params(axis='x', nticks=6)
-    univrs_line = plt.plot(univ_rs, color='blue', label='Long Univ RS')
-
-    plt.legend(handles=[univrs_line[0]], loc='lower left', fontsize='small')
-    plt.set_title('Relative Strength')
-    plt.grid(color='gray', linestyle='solid')
-
-
-def plot_returns(plt, returns, long_univ_returns, benchmark_returns):
+def plot_returns(plt, returns, benchmark_returns):
         plt.clear()
         algo_line = plt.plot(returns, color='black', label='Algo')
-        # long_univ_line = plt.plot(long_univ_returns, color='blue', label='Long Univ')
-        #short_univ_line = plt.plot(short_univ_returns, color='red', label='Short Univ')
-        # long_univ_returns_avg = long_univ_returns.rolling(window=21, min_periods=1).mean()
-        # long_univ_avg_line = plt.plot(long_univ_returns_avg, color='red', label='Long Univ Avg')
         benchmark_line = plt.plot(benchmark_returns, color='gray', label='Benchmark')
         plt.tick_params(reset=True, length=6)
         plt.legend(handles=[algo_line[0], benchmark_line[0]], loc='upper left', fontsize='small')
         plt.set_title('Returns')
         plt.grid(color='gray', linestyle='solid')
 
-def plot_hitrate(plt, hr):
-    plt.clear()
-    #hr_line = plt.plot(hr, color='blue', label='Hit Rate')
 
-    hravg = hr.rolling(window=21, min_periods=1).mean()
-    hravg_line = plt.plot(hravg, color='blue', label='Avg (' + str(hitrate_avg_lookback) + 'd)')
-
-    plt.tick_params(reset=True, length=6)
-    plt.legend(handles=[hravg_line[0]], loc='lower left', fontsize='small')
-    plt.set_title('Hit Rate')
-    plt.grid(color='gray', linestyle='solid')
-
-
-def plot_adline(plt, adline):
-        plt.clear()
-        plt.locator_params(axis='x', nticks=6)
-        algo_line = plt.plot(adline, color='blue', label='Long Univ')
-
-        adavg = adline.rolling(window=adline_avg_lookback, min_periods=1).mean()
-        adavg_line = plt.plot(adavg, color='gray', label='Avg (' + str(adline_avg_lookback) + 'd)')
-
-        plt.legend(handles=[algo_line[0],  adavg_line[0]], loc='upper left', fontsize='small')
-        plt.set_title('Adv Dec')
-        plt.grid(color='gray', linestyle='solid')
-
-
-def plot_drawdown(plt, algodd, univdd, benchmarkdd):
+def plot_drawdown(plt, algodd, benchmarkdd):
         plt.clear()
         plt.locator_params(axis='x', nticks=6)
         algo_line = plt.plot(algodd, color='black', label='Algo')
-        univ_line = plt.plot(univdd, color='blue', label='Long Univ')
         benchmark_line = plt.plot(benchmarkdd, color='gray', label='Benchmark')
 
-        plt.legend(handles=[algo_line[0], univ_line[0], benchmark_line[0]], loc='lower left', fontsize='small')
+        plt.legend(handles=[algo_line[0], benchmark_line[0]], loc='lower left', fontsize='small')
         plt.set_title('Drawdown')
         plt.grid(color='gray', linestyle='solid')
 
-def plot_positions_leverage(plt, num_pos, univ_len, leverage, num_residuals):
+
+def plot_positions_leverage(plt, num_pos, leverage):
         plt.clear()
         plt.locator_params(axis='x', nticks=6)
         numpos_line = plt.plot(num_pos, color='black', label='Algo')
-        univlen_line = plt.plot(univ_len, color='blue', label='Long Univ')
         leverage_line = plt.plot(100 * leverage, color='green', label='Leverage')
-        residuals_line = plt.plot(num_residuals, color='orange', label='Residuals')
 
-        plt.legend(handles=[numpos_line[0], univlen_line[0], leverage_line[0], residuals_line[0]], loc='lower left', fontsize='small')
+        plt.legend(handles=[numpos_line[0], leverage_line[0]], loc='lower left', fontsize='small')
         plt.set_title('Positions & Leverage')
         plt.grid(color='gray', linestyle='solid')
 
-def plot_exposure(plt, exposure):
-        plt.clear()
-        plt.locator_params(axis='x', nticks=6)
-        algo_line = plt.plot(exposure, color='black')
-        plt.legend(handles=[algo_line[0]], loc='lower left', fontsize='small')
-        plt.set_title('Leverage')
-        plt.grid(color='gray', linestyle='solid')
 
 def get_benchmark_returns(context):
     return context.trading_environment.benchmark_returns.loc[context.sim_params.start_session: context.datetime]
