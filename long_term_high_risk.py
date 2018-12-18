@@ -3,19 +3,20 @@ from zipline.utils.run_algo import run_algorithm
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
+import datetime
+import matplotlib.pyplot as plt
+from zipline.utils.events import date_rules, time_rules
+import numpy as np
 from zipline.api import (
-
     get_datetime,
     attach_pipeline,
+    order_target,
     order_target_percent,
-    symbol,
     pipeline_output,
     record,
     schedule_function,
     get_environment,
 )
-import datetime
-import matplotlib.pyplot as plt
 from utils.plot_util import (
     plot_header,
     plot_performance,
@@ -27,11 +28,7 @@ from utils.plot_util import (
     get_benchmark_returns
 )
 
-from zipline.utils.events import date_rules, time_rules
-import numpy as np
-current_year = None
-
-# stop loss non addition limit set to 5 days
+# stop loss non addition limit set to 15 days
 stop_loss_prevention_days = 15
 
 
@@ -93,6 +90,7 @@ def initialize(context):
     context.ax = ax
     context.fig = fig
 
+
 def make_pipeline():
     fd = Fundamentals()
     sectors = NASDAQSectorCodes()
@@ -113,6 +111,7 @@ def make_pipeline():
             'sector': sectors
         },
     )
+
 
 def recordvars(context, data):
     date = get_datetime()
@@ -185,12 +184,36 @@ def recordvars(context, data):
         plt.pause(0.01)
 
 
+def recalc_sector_wise_exposure(context):
+    # loop thru all the positions
+    net = context.portfolio.portfolio_value
+    for sector, stocks in context.sector_stocks.items():
+        sector_exposure = 0
+        for stock in stocks:
+            position = context.portfolio.positions.get(stock)
+            if position is not None:
+                exposure = (position.last_sale_price * position.amount) / net
+                sector_exposure += exposure
+        context.sector_wise_exposure[sector] = sector_exposure
+
+
+def rebalance(context, data):
+    net = context.portfolio.portfolio_value
+    for position in context.portfolio.positions.values():
+        exposure = (position.last_sale_price * position.amount) / net
+        # selling half to book profit
+        if exposure > 0.15:
+            order_target_percent(position.asset, exposure / 2)
+            print("Half profit booking done for {}".format(position.asset.symbol))
+
+
 def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
 
 
 def handle_data(context, data):
     positions = list(context.portfolio.positions.values())
+    cash = context.portfolio.cash
     recalc_sector_wise_exposure(context)
 
     pipeline_data = context.pipeline_data
@@ -229,8 +252,9 @@ def handle_data(context, data):
         # sell at stop loss
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
         if net_gain_loss < -3:
-            order_target_percent(position.asset, 0)
-            # TODO: fix for order target not going through
+            order_target(position.asset, 0)
+            cash += (position.last_sale_price * position.amount)
+            # TODO: fix for order not going through
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
             except Exception as e:
@@ -249,61 +273,45 @@ def handle_data(context, data):
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 if avg_vol < 10000:
                     continue
-                # buy order
-                exposure = get_exposure(context.sector_wise_exposure, interested_assets.loc[stock].sector)
-                if exposure > 0.01 and data.can_trade(stock):
-                    order_target_percent(stock, exposure)
-                    if context.sector_stocks.get(interested_assets.loc[stock].sector, None) is None:
-                        context.sector_stocks.update({interested_assets.loc[stock].sector: [stock]})
+                price = data.history(stock, 'price', 1, '1d').item()
+                sector = interested_assets.loc[stock].sector
+                quantity = get_exposure(context.portfolio.portfolio_value,
+                                        context.sector_wise_exposure, sector, price, cash)
+
+                if quantity > 0 and data.can_trade(stock):
+                    # buy order
+                    order_target(stock, quantity)
+                    cash -= quantity * data.current(stock, 'price')
+                    if context.sector_stocks.get(sector, None) is None:
+                        context.sector_stocks.update({sector: [stock]})
                     else:
-                        context.sector_stocks[interested_assets.loc[stock].sector].append(stock)
-                    print("Buy order triggered for: {} on {} for {} %"
-                          .format(stock.symbol, data.current_dt.strftime('%m/%d/%Y'), round(exposure * 100, 2)))
+                        context.sector_stocks[sector].append(stock)
+                    print("Buy order triggered for: {} on {} for {} shares"
+                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
                 position_list.append(stock)
                 # limit the max position to 25 at all stages
                 if len(position_list) >= 25:
                     break
 
     context.stop_loss_list = stop_list
-    print("Handle data processed for {}".format(data.current_dt.strftime('%m/%d/%Y')))
+    print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
-def recalc_sector_wise_exposure(context):
-    # loop thru all the positions
-    net = context.portfolio.portfolio_value
-    for sector, stocks in context.sector_stocks.items():
-        sector_exposure = 0
-        for stock in stocks:
-            position = context.portfolio.positions.get(stock)
-            if position is not None:
-                exposure = (position.last_sale_price * position.amount) / net
-                sector_exposure += exposure
-        context.sector_wise_exposure[sector] = sector_exposure
-
-
-def rebalance(context, data):
-    net = context.portfolio.portfolio_value
-    for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
-        # selling half to book profit
-        if exposure > 0.15:
-            order_target_percent(position.asset, exposure / 2)
-            print("Half profit booking done for {}".format(position.asset.symbol))
-
-
-def get_exposure(sector_wise_exposure, sector):
+def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
+    available_exposure = cash / portfolio_value
     if sector in sector_wise_exposure:
         sector_exposure = sector_wise_exposure.get(sector)
         if sector_exposure < 0.15:
-            exposure = min(0.15 - sector_exposure, 0.05)
+            exposure = min(0.15 - sector_exposure, 0.05, available_exposure)
             exposure = round(exposure, 4)
             sector_wise_exposure[sector] += exposure
-            return exposure
         else:
-            return 0
+            exposure = 0
     else:
-        sector_wise_exposure[sector] = 0.05
-        return 0.05
+        exposure = min(0.05, available_exposure)
+        sector_wise_exposure[sector] = exposure
+    quantity = int((exposure * portfolio_value) / price)
+    return quantity
 
 
 def analyze(context, results):
