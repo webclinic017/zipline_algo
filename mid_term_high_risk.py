@@ -151,7 +151,7 @@ def recordvars(context, data):
 
     benchmark_returns = 1 + get_benchmark_returns(context)
     benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
-    benchmarkdd = min(0, 100 * (((benchmark_returns_cum[-1]) - max(benchmark_returns_cum))) / (
+    benchmarkdd = min(0, 100 * ((benchmark_returns_cum[-1]) - max(benchmark_returns_cum)) / (
             100 + max(benchmark_returns_cum)))
     port_history.set_value(date, 'benchmarkdd', benchmarkdd)
 
