@@ -1,24 +1,22 @@
-import datetime
-
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
+from zipline.utils.run_algo import run_algorithm
 from alphacompiler.data.sf1_fundamentals import Fundamentals
+from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
+from zipline.pipeline import Pipeline
+import datetime
+import matplotlib.pyplot as plt
+from zipline.utils.events import date_rules, time_rules
+import numpy as np
 from zipline.api import (
     get_datetime,
     attach_pipeline,
-    order_target,
     order_target_percent,
+    order_target,
     pipeline_output,
     record,
     schedule_function,
     get_environment,
 )
-from zipline.pipeline import Pipeline
-from zipline.utils.events import date_rules, time_rules
-from zipline.utils.run_algo import run_algorithm
-
 from utils.plot_util import (
     plot_header,
     plot_performance,
@@ -29,7 +27,7 @@ from utils.plot_util import (
     get_benchmark_returns
 )
 
-# stop loss non addition limit set to 15 days
+# stop loss non addition limit set to 5 days
 stop_loss_prevention_days = 15
 
 
@@ -95,47 +93,6 @@ def make_pipeline():
     )
 
 
-def recordvars(context, data):
-    date = get_datetime()
-    port_history = context.port_history
-
-    portfolio_net = context.account.equity_with_loan
-    num_pos = len(context.portfolio.positions)
-    leverage = context.account.leverage
-
-    port_history.set_value(date, 'portfolio_net', portfolio_net)
-    port_history.set_value(date, 'leverage', leverage)
-    port_history.set_value(date, 'num_pos', num_pos)
-
-    today_return = port_history['portfolio_net'][-2:].pct_change().fillna(0)[-1]
-    port_history.set_value(date, 'returns', today_return)
-
-    max_net = port_history['portfolio_net'].max()
-    algodd = min(0, 100 * (portfolio_net - max_net) / max_net)
-    port_history.set_value(date, 'algodd', algodd)
-
-    algo_returns_cum = 100 * ((1 + port_history['returns']).cumprod() - 1)
-
-    benchmark_returns = 1 + get_benchmark_returns(context)
-    benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
-    benchmarkdd = min(0, 100 * (((benchmark_returns_cum[-1]) - max(benchmark_returns_cum))) / (
-            100 + max(benchmark_returns_cum)))
-    port_history.set_value(date, 'benchmarkdd', benchmarkdd)
-
-    record(leverage=leverage, num_pos=num_pos)
-
-    # if we have more than 1 month history update the equity curve plot
-    if get_environment('arena') == 'backtest' and len(port_history) % 10 == 0:
-        ax = context.ax
-        fig = context.fig
-
-        plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
-        plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
-        plot_positions_leverage(ax[1, 0], port_history['num_pos'], port_history['leverage'])
-        fig.canvas.draw()  # draw
-        plt.pause(0.01)
-
-
 def recalc_sector_wise_exposure(context):
     # loop thru all the positions
     net = context.portfolio.portfolio_value
@@ -159,6 +116,47 @@ def rebalance(context, data):
             print("Half profit booking done for {}".format(position.asset.symbol))
 
 
+def recordvars(context, data):
+    date = get_datetime()
+    port_history = context.port_history
+
+    portfolio_net = context.account.equity_with_loan
+    num_pos = len(context.portfolio.positions)
+    leverage = context.account.leverage
+
+    port_history.set_value(date, 'portfolio_net', portfolio_net)
+    port_history.set_value(date, 'leverage', leverage)
+    port_history.set_value(date, 'num_pos', num_pos)
+
+    today_return = port_history['portfolio_net'][-2:].pct_change().fillna(0)[-1]
+    port_history.set_value(date, 'returns', today_return)
+
+    max_net = port_history['portfolio_net'].max()
+    algodd = min(0, 100 * (portfolio_net - max_net) / max_net)
+    port_history.set_value(date, 'algodd', algodd)
+
+    algo_returns_cum = 100 * ((1 + port_history['returns']).cumprod() - 1)
+
+    benchmark_returns = 1 + get_benchmark_returns(context)
+    benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
+    benchmarkdd = min(0, 100 * ((benchmark_returns_cum[-1]) - max(benchmark_returns_cum)) / (
+            100 + max(benchmark_returns_cum)))
+    port_history.set_value(date, 'benchmarkdd', benchmarkdd)
+
+    record(leverage=leverage, num_pos=num_pos)
+
+    # if we have more than 1 month history update the equity curve plot
+    if get_environment('arena') == 'backtest' and len(port_history) % 10 == 0:
+        ax = context.ax
+        fig = context.fig
+
+        plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
+        plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
+        plot_positions_leverage(ax[1, 0], port_history['num_pos'], port_history['leverage'])
+        fig.canvas.draw()  # draw
+        plt.pause(0.01)
+
+
 def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
 
@@ -171,7 +169,7 @@ def handle_data(context, data):
     pipeline_data = context.pipeline_data
     stop_list = context.stop_loss_list
 
-    # remove assets with no market cap
+    # remove assests with no market cap
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
     # filter assets based on
@@ -202,8 +200,7 @@ def handle_data(context, data):
     for position in positions:
         position_list.append(position.asset)
         # sell at stop loss
-        net_gain_loss = float(
-            "{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
+        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
             cash += (position.last_sale_price * position.amount)
@@ -213,7 +210,7 @@ def handle_data(context, data):
             except Exception as e:
                 print(e)
 
-            print("Stop loss triggered for: " + position.asset.symbol)
+            print("Stop loss triggered for: "+position.asset.symbol)
             # add to stop loss list to prevent re-buy
             stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
             stop_list = stop_list.append(stop_loss)
@@ -226,13 +223,13 @@ def handle_data(context, data):
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 if avg_vol < 10000:
                     continue
+
                 price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
                 quantity = get_exposure(context.portfolio.portfolio_value,
                                         context.sector_wise_exposure, sector, price, cash)
 
                 if quantity > 0 and data.can_trade(stock):
-                    # buy order
                     order_target(stock, quantity)
                     cash -= quantity * data.current(stock, 'price')
                     if context.sector_stocks.get(sector, None) is None:
@@ -285,7 +282,7 @@ def analyze(context, results):
 
 
 def sell_all(positions):
-    print("Sell All rule triggered for " + str(len(positions)))
+    print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
 
@@ -294,7 +291,6 @@ def get_dma_returns(context, period, dma_end_date):
     dma_start_date = dma_end_date - datetime.timedelta(days=period)
     returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
     dma_return = 100 * (returns.prod() - 1)
-    # dma_return = context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date].sum()
     return dma_return
 
 
