@@ -24,7 +24,8 @@ from utils.plot_util import (
     plot_portfolio_value,
     plot_returns,
     plot_drawdown,
-    plot_positions_leverage,
+    plot_positions,
+    plot_leverage,
     get_benchmark_returns
 )
 
@@ -164,7 +165,8 @@ def recordvars(context, data):
 
         plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
         plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
-        plot_positions_leverage(ax[1, 0], port_history['num_pos'], port_history['leverage'])
+        plot_positions(ax[1, 0], port_history['num_pos'])
+        plot_leverage(ax[1, 1], port_history['leverage'])
         fig.canvas.draw()  # draw
         plt.pause(0.01)
 

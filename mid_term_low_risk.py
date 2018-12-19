@@ -15,7 +15,7 @@ from zipline.api import (
     pipeline_output,
     record,
     schedule_function,
-    get_environment,
+    get_environment
 )
 from utils.plot_util import (
     plot_header,
@@ -23,7 +23,8 @@ from utils.plot_util import (
     plot_portfolio_value,
     plot_returns,
     plot_drawdown,
-    plot_positions_leverage,
+    plot_positions,
+    plot_leverage,
     get_benchmark_returns
 )
 
@@ -152,7 +153,8 @@ def recordvars(context, data):
 
         plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
         plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
-        plot_positions_leverage(ax[1, 0], port_history['num_pos'], port_history['leverage'])
+        plot_positions(ax[1, 0], port_history['num_pos'])
+        plot_leverage(ax[1, 1], port_history['leverage'])
         fig.canvas.draw()  # draw
         plt.pause(0.01)
 
@@ -187,7 +189,7 @@ def handle_data(context, data):
                                                 "and (ipoyear < {} or ipoyear == -1)"
                                                 "and ((100 * rnd) / revenue) >= 6"
                                                 "and netinc > 0"
-                                                "and (15 <= pe <= 60)"
+                                                "and pe < 300"
                                                 "and qoq_earnings > 0"
                                                 .format(data.current_dt.year - 2))
 
@@ -206,7 +208,7 @@ def handle_data(context, data):
         position_list.append(position.asset)
         # sell at stop loss
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
-        if net_gain_loss < -3:
+        if net_gain_loss < -5:
             order_target(position.asset, 0)
             cash += (position.last_sale_price * position.amount)
             # TODO: fix for order not going through

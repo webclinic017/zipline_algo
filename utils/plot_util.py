@@ -89,13 +89,13 @@ def plot_sortino(context, results, grid):
     plt.legend(loc=0)
 
 
-def plot_positions(context, results, grid):
-    """Plot number of shorts and longs"""
-    plot = plt.subplot(grid)
-    plot.set_ylabel('Positions')
-    results.longs_count.plot(ax=plot, color='g', linewidth=0.7)
-    results.shorts_count.plot(ax=plot, color='r', linewidth=0.7)
-    plt.legend(loc=0)
+# def plot_positions(context, results, grid):
+#     """Plot number of shorts and longs"""
+#     plot = plt.subplot(grid)
+#     plot.set_ylabel('Positions')
+#     results.longs_count.plot(ax=plot, color='g', linewidth=0.7)
+#     results.shorts_count.plot(ax=plot, color='r', linewidth=0.7)
+#     plt.legend(loc=0)
 
 
 def plot_params(params):
@@ -134,16 +134,24 @@ def plot_drawdown(plt, algodd, benchmarkdd):
         plt.grid(color='gray', linestyle='solid')
 
 
-def plot_positions_leverage(plt, num_pos, leverage):
+def plot_positions(plt, num_pos):
         plt.clear()
         plt.locator_params(axis='x', nticks=6)
         numpos_line = plt.plot(num_pos, color='black', label='Algo')
-        leverage_line = plt.plot(100 * leverage, color='green', label='Leverage')
 
-        plt.legend(handles=[numpos_line[0], leverage_line[0]], loc='lower left', fontsize='small')
-        plt.set_title('Positions & Leverage')
+        plt.legend(handles=[numpos_line[0]], loc='lower left', fontsize='small')
+        plt.set_title('Positions')
         plt.grid(color='gray', linestyle='solid')
 
+
+def plot_leverage(plt, leverage):
+    plt.clear()
+    plt.locator_params(axis='x', nticks=6)
+    leverage_line = plt.plot(100 * leverage, color='green', label='Leverage')
+
+    plt.legend(handles=[leverage_line[0]], loc='lower left', fontsize='small')
+    plt.set_title('Leverage')
+    plt.grid(color='gray', linestyle='solid')
 
 def get_benchmark_returns(context):
     return context.trading_environment.benchmark_returns.loc[context.sim_params.start_session: context.datetime]
