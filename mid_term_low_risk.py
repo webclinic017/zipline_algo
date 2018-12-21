@@ -28,8 +28,10 @@ from utils.plot_util import (
     get_benchmark_returns
 )
 
-# stop loss non addition limit set to 5 days
+# stop loss non addition limit set to 15 days
 stop_loss_prevention_days = 15
+# max exposure per sector set to 15%
+max_sector_exposure = 0.15
 
 
 def initialize(context):
@@ -189,7 +191,6 @@ def handle_data(context, data):
                                                 "and (ipoyear < {} or ipoyear == -1)"
                                                 "and ((100 * rnd) / revenue) >= 6"
                                                 "and netinc > 0"
-                                                "and pe < 300"
                                                 "and qoq_earnings > 0"
                                                 .format(data.current_dt.year - 2))
 
@@ -258,8 +259,8 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
     available_exposure = cash / portfolio_value
     if sector in sector_wise_exposure:
         sector_exposure = sector_wise_exposure.get(sector)
-        if sector_exposure < 0.15:
-            exposure = min(0.15 - sector_exposure, 0.05, available_exposure)
+        if sector_exposure < max_sector_exposure:
+            exposure = min(max_sector_exposure - sector_exposure, 0.05, available_exposure)
             exposure = round(exposure, 4)
             sector_wise_exposure[sector] += exposure
         else:
@@ -269,23 +270,6 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
         sector_wise_exposure[sector] = exposure
     quantity = int((exposure * portfolio_value) / price)
     return quantity
-
-
-def analyze(context, results):
-    # add a grid to the plots
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    # adjust the font size
-    plt.rc('font', size=7)
-
-    plot_header(context, results)
-    plot_performance(context, results, 311)
-    plot_portfolio_value(context, results, 312)
-
-    # render the plots
-    plt.tight_layout(pad=4, h_pad=1)
-    plt.legend(loc=0)
-    plt.show()
 
 
 def sell_all(positions):
@@ -308,7 +292,7 @@ if __name__ == '__main__':
     end_date = '20180326'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
-    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
+    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
 
     print(results)

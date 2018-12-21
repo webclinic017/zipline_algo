@@ -31,6 +31,8 @@ from utils.plot_util import (
 
 # stop loss non addition limit set to 5 days
 stop_loss_prevention_days = 15
+# max exposure per sector set to 15%
+max_sector_exposure = 0.15
 
 
 def initialize(context):
@@ -221,7 +223,9 @@ def handle_data(context, data):
         position_list.append(position.asset)
         # sell at stop loss
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
-        if net_gain_loss < -3:
+        old_price = data.history(position.asset, 'price', context.short_mavg_days, '1d')[0]
+        one_month_return = ((position.last_sale_price - old_price)/old_price) * 100
+        if net_gain_loss < -3 or one_month_return < -3:
             order_target(position.asset, 0)
             cash += (position.last_sale_price * position.amount)
             # TODO: fix for order not going through
@@ -251,7 +255,9 @@ def handle_data(context, data):
             # print("Gain/Loss of " + str(gain_loss)+"% in stock " + position.asset.symbol)
 
     # Buy logic
-    if len(position_list) < 25:
+
+    market_condition = get_market_condition(context, 20, data.current_dt)
+    if len(position_list) < 25 and market_condition > 0:
         for stock in interested_assets.index.values:
             # only buy if not part of positions already
             if stock not in position_list and stock not in stop_list:
@@ -292,8 +298,8 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
     available_exposure = cash / portfolio_value
     if sector in sector_wise_exposure:
         sector_exposure = sector_wise_exposure.get(sector)
-        if sector_exposure < 0.15:
-            exposure = min(0.15 - sector_exposure, 0.05, available_exposure)
+        if sector_exposure < max_sector_exposure:
+            exposure = min(max_sector_exposure - sector_exposure, 0.05, available_exposure)
             exposure = round(exposure, 4)
             sector_wise_exposure[sector] += exposure
         else:
@@ -305,21 +311,21 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
     return quantity
 
 
-def analyze(context, results):
-    # add a grid to the plots
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    # adjust the font size
-    plt.rc('font', size=7)
-
-    plot_header(context, results)
-    plot_performance(context, results, 311)
-    plot_portfolio_value(context, results, 312)
-
-    # render the plots
-    plt.tight_layout(pad=4, h_pad=1)
-    plt.legend(loc=0)
-    plt.show()
+# def analyze(context, results):
+#     # add a grid to the plots
+#     plt.rc('axes', grid=True)
+#     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+#     # adjust the font size
+#     plt.rc('font', size=7)
+#
+#     plot_header(context, results)
+#     plot_performance(context, results, 311)
+#     plot_portfolio_value(context, results, 312)
+#
+#     # render the plots
+#     plt.tight_layout(pad=4, h_pad=1)
+#     plt.legend(loc=0)
+#     plt.show()
 
 
 def sell_all(positions):
@@ -328,12 +334,15 @@ def sell_all(positions):
         order_target_percent(position.asset, 0)
 
 
-def get_dma_returns(context, period, dma_end_date):
+def get_market_condition(context, period, dma_end_date):
     dma_start_date = dma_end_date - datetime.timedelta(days=period)
-    returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
-    dma_return = 100 * (returns.prod() - 1)
-    # dma_return = context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date].sum()
-    return dma_return
+    # returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
+    # dma_return = 100 * (returns.prod() - 1)
+    dma_return = context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date].sum()
+    if dma_return >= 0:
+        return 1
+    else:
+        return -1
 
 
 if __name__ == '__main__':
@@ -343,7 +352,7 @@ if __name__ == '__main__':
     end_date = '20180326'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
-    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
+    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
 
     print(results)
