@@ -29,7 +29,7 @@ from utils.plot_util import (
     get_benchmark_returns
 )
 
-# stop loss non addition limit set to 5 days
+# stop loss non addition limit set to 15 days
 stop_loss_prevention_days = 15
 # max exposure per sector set to 15%
 max_sector_exposure = 0.15
@@ -181,12 +181,12 @@ def handle_data(context, data):
     positions = list(context.portfolio.positions.values())
     cash = context.portfolio.cash
     recalc_sector_wise_exposure(context)
-    # dma_returns = get_dma_returns(context, 70, data.current_dt)
-    #
-    # if dma_returns < 0:
-    #     if len(positions) > 0:
-    #         sell_all(positions)
-    #     return
+    market_condition = get_market_condition(context, 21, data.current_dt)
+
+    if market_condition < 0:
+        if len(positions) > 0:
+            sell_all(positions)
+        return
 
     pipeline_data = context.pipeline_data
     stop_list = context.stop_loss_list
@@ -208,6 +208,8 @@ def handle_data(context, data):
                                                 "and pe < 300"
                                                 .format(data.current_dt.year - 2))
 
+    interested_assets = interested_assets.replace([np.inf, -np.inf], np.nan)
+    interested_assets = interested_assets.dropna(subset=['qoq_earnings'])
     interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
 
     # update stop loss list
@@ -223,9 +225,9 @@ def handle_data(context, data):
         position_list.append(position.asset)
         # sell at stop loss
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
-        old_price = data.history(position.asset, 'price', context.short_mavg_days, '1d')[0]
+        old_price = data.history(position.asset, 'price', 21, '1d')[0]
         one_month_return = ((position.last_sale_price - old_price)/old_price) * 100
-        if net_gain_loss < -3 or one_month_return < -3:
+        if net_gain_loss < -3 or one_month_return < -5:
             order_target(position.asset, 0)
             cash += (position.last_sale_price * position.amount)
             # TODO: fix for order not going through
@@ -262,13 +264,13 @@ def handle_data(context, data):
             # only buy if not part of positions already
             if stock not in position_list and stock not in stop_list:
                 # Compute averages
-                # short_mavg = data.history(stock, 'price', context.short_mavg_days, '1d').mean()
+                short_mavg = data.history(stock, 'price', 21, '1d').mean()
                 # long_mavg = data.history(stock, 'price', context.long_mavg_days, '1d').mean()
-                # cur_price = data.history(stock, 'price', 1, '1d').values[0]
+                cur_price = data.history(stock, 'price', 1, '1d').values[0]
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 # avoid stocks trading below mvg averages
                 # avoid penny stock (below 5$)
-                if avg_vol < 10000:
+                if avg_vol < 10000 or cur_price < short_mavg:
                     continue
 
                 price = data.history(stock, 'price', 1, '1d').item()
@@ -336,9 +338,8 @@ def sell_all(positions):
 
 def get_market_condition(context, period, dma_end_date):
     dma_start_date = dma_end_date - datetime.timedelta(days=period)
-    # returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
-    # dma_return = 100 * (returns.prod() - 1)
-    dma_return = context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date].sum()
+    returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
+    dma_return = 100 * (returns.prod() - 1)
     if dma_return >= 0:
         return 1
     else:
