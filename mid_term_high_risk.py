@@ -26,16 +26,19 @@ from utils.plot_util import (
     plot_drawdown,
     plot_positions,
     plot_leverage,
-    get_benchmark_returns
+    get_benchmark_returns,
+    plot_alpha_beta,
+    plot_sharpe
 )
 
 # stop loss non addition limit set to 15 days
 stop_loss_prevention_days = 15
 # max exposure per sector set to 15%
 max_sector_exposure = 0.15
-
+fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
 def initialize(context):
+    global fig, ax
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
 
@@ -69,7 +72,6 @@ def initialize(context):
                       date_rule=date_rules.every_day(),
                       time_rule=time_rules.market_close())
 
-    fig, ax = plt.subplots(figsize=(10, 5), nrows=2, ncols=2)
     fig.tight_layout()
     fig.show()
     fig.canvas.draw()
@@ -356,4 +358,7 @@ if __name__ == '__main__':
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
 
+    plot_alpha_beta(ax[2, 1], results)
+    plot_sharpe(ax[2, 0], results)
+    fig.canvas.draw()
     print(results)

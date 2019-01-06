@@ -72,14 +72,22 @@ def plot_volatility(context, results, grid):
     plt.legend(loc=0)
 
 
-def plot_alpha_beta(context, results, grid):
-    """Plot alpha and beta"""
-    plot = plt.subplot(grid)
-    plot.set_ylabel('alpha/beta')
-    results.alpha.plot(ax=plot, color='c', linewidth=0.7)
-    results.beta.plot(ax=plot, color='m', linewidth=0.7)
-    plt.legend(loc=0)
+def plot_alpha_beta(plt, results):
+    plt.clear()
+    alpha_line = plt.plot(results.alpha, color='c', label='Alpha', linewidth=0.7)
+    beta_line = plt.plot(results.beta, color='m', label='Beta', linewidth=0.7)
+    plt.tick_params(reset=True, length=6)
+    plt.legend(handles=[alpha_line[0], beta_line[0]], loc='upper left', fontsize='small')
+    plt.set_title('Alpha/Beta')
+    plt.grid(color='gray', linestyle='solid')
 
+
+def plot_sharpe(plt, results):
+    plt.clear()
+    plt.plot(results.sharpe, color='black', linewidth=0.7)
+    plt.tick_params(reset=True, length=6)
+    plt.set_title('Sharpe')
+    plt.grid(color='gray', linestyle='solid')
 
 def plot_sortino(context, results, grid):
     """Plot sortino value"""
@@ -114,13 +122,13 @@ def plot_params(params):
 
 
 def plot_returns(plt, returns, benchmark_returns):
-        plt.clear()
-        algo_line = plt.plot(returns, color='black', label='Algo')
-        benchmark_line = plt.plot(benchmark_returns, color='gray', label='Benchmark')
-        plt.tick_params(reset=True, length=6)
-        plt.legend(handles=[algo_line[0], benchmark_line[0]], loc='upper left', fontsize='small')
-        plt.set_title('Returns')
-        plt.grid(color='gray', linestyle='solid')
+    plt.clear()
+    algo_line = plt.plot(returns, color='black', label='Algo')
+    benchmark_line = plt.plot(benchmark_returns, color='gray', label='Benchmark')
+    plt.tick_params(reset=True, length=6)
+    plt.legend(handles=[algo_line[0], benchmark_line[0]], loc='upper left', fontsize='small')
+    plt.set_title('Returns')
+    plt.grid(color='gray', linestyle='solid')
 
 
 def plot_drawdown(plt, algodd, benchmarkdd):
