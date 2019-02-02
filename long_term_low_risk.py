@@ -40,10 +40,11 @@ def initialize(context):
     context.stop_loss_list = pd.Series()
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
+    context.keep_list = []
 
     schedule_function(
         rebalance,
-        date_rule=date_rules.month_start(())
+        date_rule=date_rules.month_start()
     )
 
     port_history = pd.DataFrame(np.empty(0, dtype=[
@@ -104,13 +105,86 @@ def recalc_sector_wise_exposure(context):
 
 
 def rebalance(context, data):
-    net = context.portfolio.portfolio_value
-    for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
-        # selling half to book profit
-        if exposure > 0.15:
-            order_target_percent(position.asset, exposure / 2)
-            print("Half profit booking done for {}".format(position.asset.symbol))
+    positions = list(context.portfolio.positions.values())
+    pipeline_data = context.pipeline_data
+    cash = context.portfolio.cash
+    stop_list = context.stop_loss_list
+    recalc_sector_wise_exposure(context)
+    interested_assets = pipeline_data.dropna(subset=['marketcap'])
+
+    # filter assets based on
+    # 1. market cap is large cap (>10billion)
+    # 2. liabilities < 180bn
+    # 3. yoy sales > 3% or none
+    # 4. ipo should be earlier than at least two years or n/a
+    # 5. should have invested more than or equal 6% of total revenue in RND
+    # 6. net income should be positive
+    # 7. should not have a decrease in earnings
+    interested_assets = interested_assets.query("marketcap > 10000000000 "
+                                                "and liabilities < 180000000000 "
+                                                "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
+                                                "and (ipoyear < {} or ipoyear == -1)"
+                                                "and ((100 * rnd) / revenue) >= 6"
+                                                "and netinc > 0"
+                                                "and qoq_earnings > 0"
+                                                .format(data.current_dt.year - 2))
+
+    # sort the buy candidate stocks based on their quarterly earnings
+    interested_assets = interested_assets.replace([np.inf, -np.inf], np.nan)
+    interested_assets = interested_assets.dropna(subset=['qoq_earnings'])
+    interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
+
+    # net = context.portfolio.portfolio_value
+    # for position in context.portfolio.positions.values():
+    #     exposure = (position.last_sale_price * position.amount) / net
+    #     # selling half to book profit
+    #     if exposure > 0.15:
+    #         order_target_percent(position.asset, exposure / 2)
+    #         print("Half profit booking done for {}".format(position.asset.symbol))
+
+    position_list = []
+    for position in positions:
+        position_list.append(position.asset)
+        net_gain_loss = float(
+            "{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
+        if net_gain_loss > 10:
+            context.keep_list.append(position.asset)
+
+    yearly_prices = data.history(interested_assets.index.tolist(), 'close', 365, '1d')
+    yearly_pct_change = yearly_prices.pct_change()[1:]
+    yearly_pct_change = yearly_pct_change[(yearly_pct_change.T != 0).any()]
+    yearly_price_skew = yearly_pct_change.skew(skipna=True)
+    stock_list = [i for i, v in yearly_price_skew.items() if v > 0]
+    stock_list.extend(context.keep_list)
+    stock_list = sorted(list(set(stock_list)))
+
+    # Buy logic
+    if len(position_list) < 25:
+        for stock in interested_assets.index.values:
+            if stock not in position_list and stock not in stop_list:
+                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                if avg_vol < 10000:
+                    continue
+
+                price = data.history(stock, 'price', 1, '1d').item()
+                sector = interested_assets.loc[stock].sector
+                quantity = get_quantity(context.portfolio.portfolio_value,
+                                        context.sector_wise_exposure, sector, price, cash)
+
+                if quantity > 0 and data.can_trade(stock):
+                    order_target(stock, quantity)
+                    cash -= quantity * data.current(stock, 'price')
+                    if context.sector_stocks.get(sector, None) is None:
+                        context.sector_stocks.update({sector: [stock]})
+                    else:
+                        context.sector_stocks[sector].append(stock)
+                    print("Buy order triggered for: {} on {} for {} shares"
+                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
+                position_list.append(stock)
+                if len(position_list) >= 25:
+                    break
+
+    print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
 def recordvars(context, data):
@@ -161,33 +235,8 @@ def before_trading_start(context, data):
 
 def handle_data(context, data):
     positions = list(context.portfolio.positions.values())
-    cash = context.portfolio.cash
-    recalc_sector_wise_exposure(context)
-    pipeline_data = context.pipeline_data
+    # cash = context.portfolio.cash
     stop_list = context.stop_loss_list
-    interested_assets = pipeline_data.dropna(subset=['marketcap'])
-
-    # filter assets based on
-    # 1. market cap is large cap (>10billion)
-    # 2. liabilities < 180bn
-    # 3. yoy sales > 3% or none
-    # 4. ipo should be earlier than at least two years or n/a
-    # 5. should have invested more than or equal 6% of total revenue in RND
-    # 6. net income should be positive
-    # 7. should not have a decrease in earnings
-    interested_assets = interested_assets.query("marketcap > 10000000000 "
-                                                "and liabilities < 180000000000 "
-                                                "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
-                                                "and (ipoyear < {} or ipoyear == -1)"
-                                                "and ((100 * rnd) / revenue) >= 6"
-                                                "and netinc > 0"
-                                                "and qoq_earnings > 0"
-                                                .format(data.current_dt.year - 2))
-
-    # sort the buy candidate stocks based on their quarterly earnings
-    interested_assets = interested_assets.replace([np.inf, -np.inf], np.nan)
-    interested_assets = interested_assets.dropna(subset=['qoq_earnings'])
-    interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
 
     for i1, s1 in stop_list.items():
         stop_list = stop_list.drop(index=[i1])
@@ -203,7 +252,7 @@ def handle_data(context, data):
             "{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -5:
             order_target(position.asset, 0)
-            cash += (position.last_sale_price * position.amount)
+            # cash += (position.last_sale_price * position.amount)
 
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
@@ -213,35 +262,6 @@ def handle_data(context, data):
             print("Stop loss triggered for: " + position.asset.symbol)
             stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
             stop_list = stop_list.append(stop_loss)
-
-    # Buy logic
-    if len(position_list) < 25:
-        for stock in interested_assets.index.values:
-            if stock not in position_list and stock not in stop_list:
-                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                if avg_vol < 10000:
-                    continue
-
-                price = data.history(stock, 'price', 1, '1d').item()
-                sector = interested_assets.loc[stock].sector
-                quantity = get_quantity(context.portfolio.portfolio_value,
-                                        context.sector_wise_exposure, sector, price, cash)
-
-                if quantity > 0 and data.can_trade(stock):
-                    order_target(stock, quantity)
-                    cash -= quantity * data.current(stock, 'price')
-                    if context.sector_stocks.get(sector, None) is None:
-                        context.sector_stocks.update({sector: [stock]})
-                    else:
-                        context.sector_stocks[sector].append(stock)
-                    print("Buy order triggered for: {} on {} for {} shares"
-                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
-                position_list.append(stock)
-                if len(position_list) >= 25:
-                    break
-
-    context.stop_loss_list = stop_list
-    print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
 def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
