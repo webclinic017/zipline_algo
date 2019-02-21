@@ -19,7 +19,7 @@ BASE = os.path.dirname(os.path.realpath(__file__))
 DS_NAME = 'SHARADAR/SF1'   # quandl DataSet code
 RAW_FLDR = "raw"  # folder to store the raw text file
 VAL_COL_NAME = "Value"
-START_DATE = '2008-01-01'
+START_DATE = '1999-01-01'
 END_DATE = datetime.datetime.today().strftime('%Y-%m-%d')
 
 
@@ -70,7 +70,6 @@ def demo():
 
 def all_tickers_for_bundle(fields, bundle_name, raw_path=os.path.join(BASE,RAW_FLDR)):
     tickers = get_ticker_sid_dict_from_bundle(bundle_name)
-    # populate_raw_data({"WMT":3173, "HD":2912, "CSCO":2809}, fields, raw_path)
     populate_raw_data(tickers, fields, raw_path)
     return len(tickers)
 
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     # demo()
     # fields = ["ROE_ART", "BVPS_ARQ", "SPS_ART", "FCFPS_ARQ", "PRICE"]
     fields = ["revenue", "rnd", "netinc", "eps", "liabilities", "ebt", "ebitda", "dps", "marketcap", "gp", "pe", "ps1",
-               "divyield", "price", "yoy_sales", "qoq_earnings"]
+               "divyield", "price"]
     num_tickers = all_tickers_for_bundle(fields, 'quandl')
     pack_sparse_data(num_tickers + 1,  # number of tickers in buldle + 1
                     os.path.join(BASE,RAW_FLDR),

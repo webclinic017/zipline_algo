@@ -104,16 +104,17 @@ def pack_sparse_data(N, rawpath, fields, filename):
     """pack data into np.recarray and persists it to a file to be
     used by SparseDataFactor"""
 
-
     # create buffer to hold data for all tickers
     dfs = [None] * N
-
+    fields.extend(['yoy_sales', 'qoq_earnings'])
     max_len = -1
     for fn in listdir(rawpath):
         if not fn.endswith(".csv"):
             continue
         df = pd.read_csv(os.path.join(rawpath,fn), index_col="Date", parse_dates=True)
         df = df.sort_index()
+        df['yoy_sales'] = df.revenue.pct_change(periods=4)
+        df['qoq_earnings'] = df.eps.pct_change()
         sid = int(fn.split('.')[0])
         dfs[sid] = df
 
