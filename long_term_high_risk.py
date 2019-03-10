@@ -18,9 +18,6 @@ from zipline.api import (
     get_environment,
 )
 from utils.plot_util import (
-    plot_header,
-    plot_performance,
-    plot_portfolio_value,
     plot_returns,
     plot_drawdown,
     plot_positions,
@@ -42,8 +39,6 @@ def initialize(context):
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
 
-    context.long_mavg_days = 200
-    context.short_mavg_days = 50
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
 
