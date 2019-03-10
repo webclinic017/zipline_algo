@@ -112,16 +112,6 @@ def recalc_sector_wise_exposure(context):
         context.sector_wise_exposure[sector] = sector_exposure
 
 
-def rebalance(context, data):
-    net = context.portfolio.portfolio_value
-    for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
-        # selling half to book profit
-        if exposure > 0.15:
-            order_target_percent(position.asset, exposure / 2)
-            print("Half profit booking done for {}".format(position.asset.symbol))
-
-
 def recordvars(context, data):
     date = get_datetime()
     port_history = context.port_history
@@ -168,13 +158,17 @@ def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
 
 
-def handle_data(context, data):
+def rebalance(context, data):
     positions = list(context.portfolio.positions.values())
     cash = context.portfolio.cash
+    stop_list = context.stop_loss_list
+    pipeline_data = context.pipeline_data
+
     recalc_sector_wise_exposure(context)
 
-    pipeline_data = context.pipeline_data
-    stop_list = context.stop_loss_list
+    benchmark_dma = get_dma_returns(context, 70, data.current_dt)
+    if benchmark_dma < 0:
+        return
 
     # remove assests with no market cap
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
@@ -195,32 +189,17 @@ def handle_data(context, data):
 
     interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
 
-    # update stop loss list
-    for i1, s1 in stop_list.items():
-        stop_list = stop_list.drop(index=[i1])
-        s1 -= 1
-        if s1 > 0:
-            stop_list = stop_list.append(pd.Series([s1], index=[i1]))
+    net = context.portfolio.portfolio_value
+    for position in context.portfolio.positions.values():
+        exposure = (position.last_sale_price * position.amount) / net
+        # selling half to book profit
+        if exposure > 0.15:
+            order_target_percent(position.asset, exposure / 2)
+            print("Half profit booking done for {}".format(position.asset.symbol))
 
-    # Sell logic
     position_list = []
     for position in positions:
         position_list.append(position.asset)
-        # sell at stop loss
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
-        if net_gain_loss < -3:
-            order_target(position.asset, 0)
-            cash += (position.last_sale_price * position.amount)
-            # TODO: fix for order not going through
-            try:
-                context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
-            except Exception as e:
-                print(e)
-
-            print("Stop loss triggered for: "+position.asset.symbol)
-            # add to stop loss list to prevent re-buy
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
 
     # Buy logic
     if len(position_list) < 25:
@@ -250,8 +229,43 @@ def handle_data(context, data):
                 if len(position_list) >= 25:
                     break
 
+
+def handle_data(context, data):
+    positions = list(context.portfolio.positions.values())
+    stop_list = context.stop_loss_list
+
+    # update stop loss list
+    for i1, s1 in stop_list.items():
+        stop_list = stop_list.drop(index=[i1])
+        s1 -= 1
+        if s1 > 0:
+            stop_list = stop_list.append(pd.Series([s1], index=[i1]))
+
+    benchmark_dma = get_dma_returns(context, 70, data.current_dt)
+    if benchmark_dma < 0:
+        sell_all(positions)
+        return
+
+    # Sell logic
+    position_list = []
+    for position in positions:
+        position_list.append(position.asset)
+        # sell at stop loss
+        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
+        if net_gain_loss < -3:
+            order_target(position.asset, 0)
+            try:
+                context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
+            except Exception as e:
+                print(e)
+
+            print("Stop loss triggered for: "+position.asset.symbol)
+            # add to stop loss list to prevent re-buy
+            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+            stop_list = stop_list.append(stop_loss)
+
     context.stop_loss_list = stop_list
-    print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
+    print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
 def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
@@ -280,15 +294,17 @@ def sell_all(positions):
 def get_dma_returns(context, period, dma_end_date):
     dma_start_date = dma_end_date - datetime.timedelta(days=period)
     returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
+    if returns.size < 50:
+        return 0
     dma_return = 100 * (returns.prod() - 1)
     return dma_return
 
 
 if __name__ == '__main__':
-    start_date = '20080331'
+    start_date = '20000101'
     start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
 
-    end_date = '20180326'
+    end_date = '20180331'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
