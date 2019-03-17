@@ -3,7 +3,6 @@ from zipline.utils.run_algo import run_algorithm
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
-import datetime
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
@@ -45,7 +44,9 @@ stop_loss_prevention_days = 15
     The sector exposure is updated each day to ensure the exposure change due to price changes is taken into account
 """
 # max exposure per sector set to 15%
-max_sector_exposure = 0.15
+max_sector_exposure = 0.21
+initial_exposure = 0.07
+dma = 200
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
 
@@ -143,27 +144,6 @@ def recalc_sector_wise_exposure(context):
         context.sector_wise_exposure[sector] = sector_exposure
 
 
-def rebalance(context, data):
-    """
-    The function used to rebalance and book profits in a stock. The net exposure of any particular stock goes beyond
-    15% of the net portfolio, half of the stock is sold thereby booking partial profit in it and
-    reducing the exposure to 7.5%
-    :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
-    :param data: mandatory to call as part of scheduled function, unused in our case
-    :return: None
-    """
-    net = context.portfolio.portfolio_value
-    for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
-        # selling half to book profit
-        if exposure > 0.15:
-            # order_target_percent is a zipline function that allows to place orders based on the percentage target
-            # that needs to be achieved. so order_target(xyz, 0.05) = will put a buy/sell order for xyx stock to reach
-            # an equivalent of 5% of the current portfolio value.
-            order_target_percent(position.asset, exposure / 2)
-            print("Half profit booking done for {}".format(position.asset.symbol))
-
-
 def recordvars(context, data):
     """
     The function is used to record various parameters at market close on each day, that are used for the graph plotting.
@@ -224,10 +204,11 @@ def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
 
 
-def handle_data(context, data):
+def rebalance(context, data):
     """
-    handle_data carries the most important logic of the algorithm, this is the function where actual calculations for
-    buying and selling takes place
+    The function used to rebalance and book profits in a stock. The net exposure of any particular stock goes beyond
+    15% of the net portfolio, half of the stock is sold thereby booking partial profit in it and
+    reducing the exposure to 7.5%
     :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
     :param data: mandatory to call as part of scheduled function, unused in our case
     :return: None
@@ -235,17 +216,21 @@ def handle_data(context, data):
     # get the list of current positions and store it in the local variable called positions
     positions = list(context.portfolio.positions.values())
 
+    # get the pipeline data and store it in the local variable called pipeline_data
+    pipeline_data = context.pipeline_data
+
     # get the current cash value and store it in the local variable called cash
     cash = context.portfolio.cash
+
+    # get the stop list and store it in the local variable called stop_list
+    stop_list = context.stop_loss_list
 
     # call the recalc function to update the exposure to all sectors
     recalc_sector_wise_exposure(context)
 
-    # get the pipeline data and store it in the local variable called pipeline_data
-    pipeline_data = context.pipeline_data
-
-    # get the stop list and store it in the local variable called stop_list
-    stop_list = context.stop_loss_list
+    benchmark_dma = get_dma_returns(context, dma, data.current_dt)
+    if benchmark_dma < 0:
+        return
 
     # remove assests with no market cap
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
@@ -272,52 +257,21 @@ def handle_data(context, data):
     interested_assets = interested_assets.dropna(subset=['qoq_earnings'])
     interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
 
-    # update stop loss list
-    # the for loop goes through all the stocks of stop_list and reduces their no buy list days by 1 until it reaches 0.
-    # If the no buy list days becomes 0, the stock is removed from the stop_loss_list and is allowed to be bought again
-    for i1, s1 in stop_list.items():
-        stop_list = stop_list.drop(index=[i1])
-        s1 -= 1
-        if s1 > 0:
-            stop_list = stop_list.append(pd.Series([s1], index=[i1]))
+    net = context.portfolio.portfolio_value
+    for position in context.portfolio.positions.values():
+        exposure = (position.last_sale_price * position.amount) / net
+        # selling half to book profit
+        if exposure > 0.15:
+            # order_target_percent is a zipline function that allows to place orders based on the percentage target
+            # that needs to be achieved. so order_target(xyz, 0.05) = will put a buy/sell order for xyx stock to reach
+            # an equivalent of 5% of the current portfolio value.
+            order_target_percent(position.asset, exposure / 2)
+            print("Half profit booking done for {}".format(position.asset.symbol))
 
-    # Sell logic
     # initialize an empty list of positions, used during the buy logic
     position_list = []
-    # loop through all the positions in the portfolio
     for position in positions:
-        # update the position_list as the loop runs everytime
         position_list.append(position.asset)
-        # calculate the net percentage change for the stock
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
-        # if the net change is less then -5%, trigger stop loss rule and sell the stock
-        if net_gain_loss < -5:
-            # order_target is a zipline function that allows to place orders based on the target number of stocks that
-            # needs to be achieved in the portfolio. So order_target(xyz, 5) = will put a buy/sell order for xyx stock
-            # such that afer the execution of the order there will be 5 shares of xyz in our portfolio. Similarly,
-            # order_target(xyz, 0) -> will sell all the quantities of xyz present in the portfolio
-            order_target(position.asset, 0)
-
-            # adjust local cash value after placing each order
-            # any orders placed in zipline duringa backtest are executed at next day before handle_Data is called. This
-            # is a default feature of zipline and is present to prevent any forward looking bias
-            # Hence the cash has to be managed locally so that the buy orders for the cash that is going to be freed up
-            # next day morning can also be placed alongwith the sale orders.
-            cash += (position.last_sale_price * position.amount)
-
-            # Sometimes, even though the orders are placed, some stocks are not sold on the execution days because of
-            # multiple reasons linked to the market condition. Since we had the stock to our sector list while placing
-            # the order itself we need to catch te exception in case the order fails and we retry to to remove it from
-            # the list again on the next day
-            try:
-                context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
-            except Exception as e:
-                print(e)
-
-            print("Stop loss triggered for: "+position.asset.symbol)
-            # add to stop loss list to prevent re-buy
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
 
     # Buy logic
     # Limit the total number of stocks in the portfolio to 25
@@ -327,6 +281,7 @@ def handle_data(context, data):
         for stock in interested_assets.index.values:
             # only buy if not part of positions already
             if stock not in position_list and stock not in stop_list:
+
                 # Calculate 50day average volume for the stock
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 # Only buy if the 50day average volume for the stock is above 10,000 to prevent low traded stocks to
@@ -344,7 +299,11 @@ def handle_data(context, data):
 
                 if quantity > 0 and data.can_trade(stock):
                     order_target(stock, quantity)
-                    # adjusting local cash after buying a stock
+                    # adjust local cash value after placing each order
+                    # any orders placed in zipline during a backtest are executed at next day before handle_Data is
+                    # called. This is a default feature of zipline and is present to prevent any forward looking bias
+                    # Hence the cash has to be managed locally
+                    # next day morning can also be placed alongwith the sale orders.
                     cash -= quantity * data.current(stock, 'price')
                     # checking if the sector os the stocks is already part of our sectors list
                     if context.sector_stocks.get(sector, None) is None:
@@ -361,6 +320,65 @@ def handle_data(context, data):
                 # limit the max position to 25 at all stages
                 if len(position_list) >= 25:
                     break
+
+
+def handle_data(context, data):
+    """
+    handle_data carries the most important logic of the algorithm, this is the function where actual calculations for
+    buying and selling takes place
+    :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
+    :param data: mandatory to call as part of scheduled function, unused in our case
+    :return: None
+    """
+    # get the list of current positions and store it in the local variable called positions
+    positions = list(context.portfolio.positions.values())
+    # get the stop list and store it in the local variable called stop_list
+    stop_list = context.stop_loss_list
+
+    # update stop loss list
+    # the for loop goes through all the stocks of stop_list and reduces their no buy list days by 1 until it reaches 0.
+    # If the no buy list days becomes 0, the stock is removed from the stop_loss_list and is allowed to be bought again
+    for i1, s1 in stop_list.items():
+        stop_list = stop_list.drop(index=[i1])
+        s1 -= 1
+        if s1 > 0:
+            stop_list = stop_list.append(pd.Series([s1], index=[i1]))
+
+    benchmark_dma = get_dma_returns(context, dma, data.current_dt)
+    if benchmark_dma < 0:
+        sell_all(positions)
+        return
+
+    # Sell logic
+    # initialize an empty list of positions, used during the buy logic
+    position_list = []
+    # loop through all the positions in the portfolio
+    for position in positions:
+        # update the position_list as the loop runs everytime
+        position_list.append(position.asset)
+        # calculate the net percentage change for the stock
+        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
+        # if the net change is less then -5%, trigger stop loss rule and sell the stock
+        if net_gain_loss < -3:
+            # order_target is a zipline function that allows to place orders based on the target number of stocks that
+            # needs to be achieved in the portfolio. So order_target(xyz, 5) = will put a buy/sell order for xyx stock
+            # such that afer the execution of the order there will be 5 shares of xyz in our portfolio. Similarly,
+            # order_target(xyz, 0) -> will sell all the quantities of xyz present in the portfolio
+            order_target(position.asset, 0)
+
+            # Sometimes, even though the orders are placed, some stocks are not sold on the execution days because of
+            # multiple reasons linked to the market condition. Since we had the stock to our sector list while placing
+            # the order itself we need to catch te exception in case the order fails and we retry to to remove it from
+            # the list again on the next day
+            try:
+                context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
+            except Exception as e:
+                print(e)
+
+            print("Stop loss triggered for: "+position.asset.symbol)
+            # add to stop loss list to prevent re-buy
+            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+            stop_list = stop_list.append(stop_loss)
 
     # updating the global stop_loss_list with the locally maintained one
     context.stop_loss_list = stop_list
@@ -386,7 +404,7 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
         # if the current exposure is less then max alowed exposure to a sector, proceed
         if sector_exposure < max_sector_exposure:
             # get minimum of available sector exposure, default share exposure and available cash exposure
-            exposure = min(max_sector_exposure - sector_exposure, 0.05, available_exposure)
+            exposure = min(max_sector_exposure - sector_exposure, initial_exposure, available_exposure)
             exposure = round(exposure, 4)
             # update the sector wise exposure
             sector_wise_exposure[sector] += exposure
@@ -395,7 +413,7 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
             exposure = 0
     else:
         # if the sector is not already present, take minimum of default share exposure and available cash exposure
-        exposure = min(0.05, available_exposure)
+        exposure = min(initial_exposure, available_exposure)
         # add sector to sector wise exposure
         sector_wise_exposure[sector] = exposure
     # calculate the quantity based on the targeted exposure and price of the stock
@@ -403,14 +421,30 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
     return quantity
 
 
+def sell_all(positions):
+    print("Sell All rule triggered for "+str(len(positions)))
+    for position in positions:
+        order_target_percent(position.asset, 0)
+
+
+def get_dma_returns(context, period, dma_end_date):
+    returns = context.trading_environment.benchmark_returns[:dma_end_date]
+    if returns.size > period:
+        returns = 1 + returns[-period:]
+    else:
+        return 0
+    dma_return = 100 * (returns.prod() - 1)
+    return dma_return
+
+
 if __name__ == '__main__':
     # start date for the backtest in yyyymmdd format string
-    start_date = '20080331'
+    start_date = '20000101'
     # converting date string to date
     start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
 
     # end date for the backtest in yyyymmdd format string
-    end_date = '20180326'
+    end_date = '20180331'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
     # The run_algorithm is a function provided by zipline that initializes and calls all the functions like before_
