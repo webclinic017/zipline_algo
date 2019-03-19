@@ -6,6 +6,8 @@ from zipline.pipeline import Pipeline
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
+import logging
+import datetime
 from zipline.api import (
     get_datetime,
     attach_pipeline,
@@ -47,7 +49,11 @@ stop_loss_prevention_days = 15
 max_sector_exposure = 0.21
 initial_exposure = 0.07
 dma = 200
+
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
+
+name = "mt_lr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
+logging.basicConfig(filename=name, level=logging.INFO)
 
 
 def initialize(context):
@@ -69,10 +75,20 @@ def initialize(context):
     # sector_stocks: dictionary of which stocks are present as part of which sector, it is update on buy/sell orders
     context.sector_stocks = {}
 
+    context.monthly_df = pd.DataFrame()
+    context.annual_df = pd.DataFrame()
+    context.turnover_count = 0
+
     # scheduling the rebalance function to be called at start of each week
     schedule_function(
         rebalance,
         date_rule=date_rules.week_start()
+    )
+
+    # scheduling the monthly function to be called at end of each month
+    schedule_function(
+        monthly_records,
+        date_rule=date_rules.month_end()
     )
 
     # set up dataframe to record equity with loan value history
@@ -98,6 +114,33 @@ def initialize(context):
     fig.canvas.draw()
     context.ax = ax
     context.fig = fig
+
+
+def analyze(context, data):
+    print("Finalize is called")
+    monthly_freq = context.monthly_df.pct_change().fillna(0)
+    logging.info("Monthly Returns and Drawdowns")
+    all_history = context.port_history.reset_index()
+    for index, row in monthly_freq.iterrows():
+        logging.info("{} Return: {}%".format(index.strftime('%b %Y'), str(round(row['portfolio_net']*100, 2))))
+
+        current_month_loc = context.monthly_df.index.get_loc(index)
+        if current_month_loc != 0:
+            max_dd = all_history[(all_history['index'] <= index) &
+                                 (all_history['index'] > context.monthly_df.iloc[current_month_loc - 1].name)]['algodd'].min()
+            logging.info("{} Max dd: {}%".format(index.strftime('%b %Y'), str(round(max_dd))))
+
+    logging.info("Annual Returns and Drawdowns")
+    annual_freq = context.annual_df.pct_change().fillna(0)
+    for index, row in annual_freq.iterrows():
+        logging.info("{} Return: {}%".format(index.strftime('%Y'), str(round(row['portfolio_net'] * 100, 2))))
+
+        current_year_loc = context.annual_df.index.get_loc(index)
+        if current_year_loc != 0:
+            max_dd = all_history[(all_history['index'] <= index) &
+                                 (all_history['index'] > context.annual_df.iloc[current_year_loc - 1].name)][
+                'algodd'].min()
+            logging.info("{} Max dd: {}%".format(index.strftime('%Y'), str(round(max_dd))))
 
 
 def make_pipeline():
@@ -178,6 +221,11 @@ def recordvars(context, data):
             100 + max(benchmark_returns_cum)))
     port_history.set_value(date, 'benchmarkdd', benchmarkdd)
 
+    if context.monthly_df.empty:
+        context.monthly_df = context.port_history[-1:]
+    if context.annual_df.empty:
+        context.annual_df = context.port_history[-1:]
+
     record(leverage=leverage, num_pos=num_pos)
 
     # if we have more than 1 month history update the equity curve plot
@@ -202,6 +250,17 @@ def before_trading_start(context, data):
     :return: None, updated value for pipeline data for the day
     """
     context.pipeline_data = pipeline_output('my_pipeline')
+
+
+def monthly_records(context, data):
+    history = context.port_history[-1:]
+    context.monthly_df = context.monthly_df.append(history)
+    if history.index.strftime('%m')[0] == '12':
+        context.annual_df = context.annual_df.append(history)
+
+        logging.info("{} Turnover count: {}".format(history.index.strftime('%Y')[0], context.turnover_count))
+        # Reset Turnover count
+        context.turnover_count = 0
 
 
 def rebalance(context, data):
@@ -266,6 +325,7 @@ def rebalance(context, data):
             # that needs to be achieved. so order_target(xyz, 0.05) = will put a buy/sell order for xyx stock to reach
             # an equivalent of 5% of the current portfolio value.
             order_target_percent(position.asset, exposure / 2)
+            context.turnover_count += 1
             print("Half profit booking done for {}".format(position.asset.symbol))
 
     # initialize an empty list of positions, used during the buy logic
@@ -299,6 +359,7 @@ def rebalance(context, data):
 
                 if quantity > 0 and data.can_trade(stock):
                     order_target(stock, quantity)
+                    context.turnover_count += 1
                     # adjust local cash value after placing each order
                     # any orders placed in zipline during a backtest are executed at next day before handle_Data is
                     # called. This is a default feature of zipline and is present to prevent any forward looking bias
@@ -346,7 +407,7 @@ def handle_data(context, data):
 
     benchmark_dma = get_dma_returns(context, dma, data.current_dt)
     if benchmark_dma < 0:
-        sell_all(positions)
+        sell_all(positions, context)
         return
 
     # Sell logic
@@ -365,6 +426,7 @@ def handle_data(context, data):
             # such that afer the execution of the order there will be 5 shares of xyz in our portfolio. Similarly,
             # order_target(xyz, 0) -> will sell all the quantities of xyz present in the portfolio
             order_target(position.asset, 0)
+            context.turnover_count += 1
 
             # Sometimes, even though the orders are placed, some stocks are not sold on the execution days because of
             # multiple reasons linked to the market condition. Since we had the stock to our sector list while placing
@@ -421,10 +483,11 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
     return quantity
 
 
-def sell_all(positions):
+def sell_all(positions, context):
     print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
+        context.turnover_count += 1
 
 
 def get_dma_returns(context, period, dma_end_date):
@@ -451,7 +514,7 @@ if __name__ == '__main__':
     # trading_start, handle_data etc etc in the prescribed order, thereby running our backtest from the defined
     # start till the end date, doing all the buy and sells with the starting capital defined as capital_base and using
     # the data bundle defined as bundle (in our case quandl
-    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
+    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
     plot_alpha_beta(ax[2, 1], results)
     plot_sharpe(ax[2, 0], results)

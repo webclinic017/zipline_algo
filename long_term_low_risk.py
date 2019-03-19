@@ -6,6 +6,7 @@ from zipline.pipeline import Pipeline
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
+import logging
 import datetime
 from zipline.api import (
     symbol,
@@ -35,6 +36,9 @@ stop_loss_prevention_days = 15
 max_sector_exposure = 0.21
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
+name = "lt_lr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
+logging.basicConfig(filename=name, level=logging.INFO)
+
 
 def initialize(context):
     global fig, ax
@@ -59,15 +63,52 @@ def initialize(context):
     port_history.set_index('date')
     context.port_history = port_history
 
+    context.monthly_df = pd.DataFrame()
+    context.annual_df = pd.DataFrame()
+    context.turnover_count = 0
+
     schedule_function(recordvars,
                       date_rule=date_rules.every_day(),
                       time_rule=time_rules.market_close())
+
+    # scheduling the monthly function to be called at end of each month
+    schedule_function(
+        monthly_records,
+        date_rule=date_rules.month_end()
+    )
 
     fig.tight_layout()
     fig.show()
     fig.canvas.draw()
     context.ax = ax
     context.fig = fig
+
+
+def analyze(context, data):
+    print("Finalize is called")
+    monthly_freq = context.monthly_df.pct_change().fillna(0)
+    logging.info("Monthly Returns and Drawdowns")
+    all_history = context.port_history.reset_index()
+    for index, row in monthly_freq.iterrows():
+        logging.info("{} Return: {}%".format(index.strftime('%b %Y'), str(round(row['portfolio_net']*100, 2))))
+
+        current_month_loc = context.monthly_df.index.get_loc(index)
+        if current_month_loc != 0:
+            max_dd = all_history[(all_history['index'] <= index) &
+                                 (all_history['index'] > context.monthly_df.iloc[current_month_loc - 1].name)]['algodd'].min()
+            logging.info("{} Max dd: {}%".format(index.strftime('%b %Y'), str(round(max_dd))))
+
+    logging.info("Annual Returns and Drawdowns")
+    annual_freq = context.annual_df.pct_change().fillna(0)
+    for index, row in annual_freq.iterrows():
+        logging.info("{} Return: {}%".format(index.strftime('%Y'), str(round(row['portfolio_net'] * 100, 2))))
+
+        current_year_loc = context.annual_df.index.get_loc(index)
+        if current_year_loc != 0:
+            max_dd = all_history[(all_history['index'] <= index) &
+                                 (all_history['index'] > context.annual_df.iloc[current_year_loc - 1].name)][
+                'algodd'].min()
+            logging.info("{} Max dd: {}%".format(index.strftime('%Y'), str(round(max_dd))))
 
 
 def make_pipeline():
@@ -131,6 +172,11 @@ def recordvars(context, data):
             100 + max(benchmark_returns_cum)))
     port_history.set_value(date, 'benchmarkdd', benchmarkdd)
 
+    if context.monthly_df.empty:
+        context.monthly_df = context.port_history[-1:]
+    if context.annual_df.empty:
+        context.annual_df = context.port_history[-1:]
+
     record(leverage=leverage, num_pos=num_pos)
 
     # if we have more than 1 month history update the equity curve plot
@@ -148,6 +194,17 @@ def recordvars(context, data):
 
 def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
+
+
+def monthly_records(context, data):
+    history = context.port_history[-1:]
+    context.monthly_df = context.monthly_df.append(history)
+    if history.index.strftime('%m')[0] == '12':
+        context.annual_df = context.annual_df.append(history)
+
+        logging.info("{} Turnover count: {}".format(history.index.strftime('%Y')[0], context.turnover_count))
+        # Reset Turnover count
+        context.turnover_count = 0
 
 
 def rebalance(context, data):
@@ -192,6 +249,7 @@ def rebalance(context, data):
         # selling half to book profit
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
+            context.turnover_count += 1
             print("Half profit booking done for {}".format(position.asset.symbol))
 
     position_list = []
@@ -222,6 +280,7 @@ def rebalance(context, data):
 
                 if quantity > 0 and data.can_trade(stock):
                     order_target(stock, quantity)
+                    context.turnover_count += 1
                     cash -= quantity * data.current(stock, 'price')
                     if context.sector_stocks.get(sector, None) is None:
                         context.sector_stocks.update({sector: [stock]})
@@ -247,7 +306,7 @@ def handle_data(context, data):
 
     benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
-        sell_all(positions)
+        sell_all(positions, context)
         return
 
     # Sell logic
@@ -260,6 +319,7 @@ def handle_data(context, data):
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
+            context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
             except Exception as e:
@@ -294,10 +354,11 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
     return quantity
 
 
-def sell_all(positions):
+def sell_all(positions, context):
     print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
+        context.turnover_count += 1
 
 
 def get_dma_returns(context, period, dma_end_date):
@@ -316,7 +377,7 @@ if __name__ == '__main__':
     end_date = '20180331'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
-    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data,
+    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
 
     plot_alpha_beta(ax[2, 1], results)
