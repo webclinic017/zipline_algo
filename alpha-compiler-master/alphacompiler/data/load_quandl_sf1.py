@@ -13,15 +13,18 @@ from logbook import Logger
 import datetime
 from os import listdir
 import os
+from pathlib import Path
 
 
-BASE = os.path.dirname(os.path.realpath(__file__))
+BASE = str(Path.home())
 DS_NAME = 'SHARADAR/SF1'   # quandl DataSet code
 RAW_FLDR = "raw"  # folder to store the raw text file
 VAL_COL_NAME = "Value"
 START_DATE = '1999-01-01'
 END_DATE = datetime.datetime.today().strftime('%Y-%m-%d')
 
+if not os.path.exists(os.path.join(BASE, RAW_FLDR)):
+    os.makedirs(os.path.join(BASE, RAW_FLDR))
 
 FN = "SF1.npy"
 
