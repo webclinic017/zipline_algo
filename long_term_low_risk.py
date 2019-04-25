@@ -262,8 +262,14 @@ def rebalance(context, data):
             if stock not in position_list and stock not in stop_list:
 
                 # Condition 1
+                # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                # if avg_vol < 10000:
+                #     continue
+
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                if avg_vol < 10000:
+                min_vol = data.history(stock, 'volume', 50, '1d').min()
+                price = data.history(stock, 'price', 1, '1d').item()
+                if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
 
                 # # Condition 2

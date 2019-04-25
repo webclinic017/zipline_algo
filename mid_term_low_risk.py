@@ -346,7 +346,13 @@ def rebalance(context, data):
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 # Only buy if the 50day average volume for the stock is above 10,000 to prevent low traded stocks to
                 # enter our portfolio
-                if avg_vol < 10000:
+                # if avg_vol < 10000:
+                #     continue
+
+                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                min_vol = data.history(stock, 'volume', 50, '1d').min()
+                price = data.history(stock, 'price', 1, '1d').item()
+                if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
 
                 # get yesterday's closing price of the stock
