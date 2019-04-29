@@ -29,7 +29,7 @@ from utils.plot_util import (
 )
 
 # stop loss non addition limit set to 15 days
-stop_loss_prevention_days = 15
+stop_loss_prevention_days = 25
 # max exposure per sector set to 15%
 max_sector_exposure = 0.15
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
@@ -42,6 +42,7 @@ def initialize(context):
     global fig, ax
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
+    context.count = 0
 
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
@@ -248,7 +249,7 @@ def rebalance(context, data):
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
             context.turnover_count += 1
-            print("Half profit booking done for {}".format(position.asset.symbol))
+            # print("Half profit booking done for {}".format(position.asset.symbol))
 
     position_list = []
     for position in positions:
@@ -259,9 +260,18 @@ def rebalance(context, data):
         for stock in interested_assets.index.values:
             # only buy if not part of positions already
             if stock not in position_list and stock not in stop_list:
+                # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                # if avg_vol < 10000:
+                #     continue
+
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                if avg_vol < 10000:
+                min_vol = data.history(stock, 'volume', 50, '1d').min()
+                price = data.history(stock, 'price', 1, '1d').item()
+                if (price * min_vol) < 11000 or avg_vol < 10000:
                     continue
+
+                if stock.symbol == 'SYNX':
+                    print("Hold")
 
                 price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
@@ -276,8 +286,8 @@ def rebalance(context, data):
                         context.sector_stocks.update({sector: [stock]})
                     else:
                         context.sector_stocks[sector].append(stock)
-                    print("Buy order triggered for: {} on {} for {} shares"
-                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
+                    # print("Buy order triggered for: {} on {} for {} shares"
+                    #       .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
                 position_list.append(stock)
                 # limit the max position to 25 at all stages
                 if len(position_list) >= 25:
@@ -290,6 +300,7 @@ def handle_data(context, data):
 
     # update stop loss list
     for i1, s1 in stop_list.items():
+
         stop_list = stop_list.drop(index=[i1])
         s1 -= 1
         if s1 > 0:
@@ -311,13 +322,14 @@ def handle_data(context, data):
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
-            except Exception as e:
-                print(e)
 
-            print("Stop loss triggered for: "+position.asset.symbol)
-            # add to stop loss list to prevent re-buy
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
+                # print("Stop loss triggered for: "+position.asset.symbol)
+                # add to stop loss list to prevent re-buy
+                stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+                stop_list = stop_list.append(stop_loss)
+            except Exception as e:
+                context.count += 1
+                print(str(context.count) + " : " + str(e) + " : " + str(position.asset.symbol))
 
     context.stop_loss_list = stop_list
     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
@@ -341,7 +353,7 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
 
 
 def sell_all(positions, context):
-    print("Sell All rule triggered for "+str(len(positions)))
+    # print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
         context.turnover_count += 1
