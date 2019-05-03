@@ -368,4 +368,4 @@ if __name__ == '__main__':
     plot_alpha_beta(ax[2, 1], results)
     plot_sharpe(ax[2, 0], results)
     fig.canvas.draw()
-    print(results)
+    input("Press any key to exit")
