@@ -11,11 +11,12 @@ import sys
 from alphacompiler.util.zipline_data_tools import get_ticker_sid_dict_from_bundle
 import os
 import requests
+from pathlib import Path
 
 # this gets all the data for the three exchanges 6000+ tickers
 BASE_URL = "http://www.nasdaq.com/screening/companies-by-industry.aspx?&render=download"
 
-BASE_PATH = os.path.dirname(os.path.realpath(__file__))
+BASE_PATH = str(Path.home())
 RAW_FILE = "NASDAQ_table.csv"
 SID_FILE = "NASDAQ_sids.npy"  # persisted np.array where
 SID_FILE_IPO = "NASDAQ_sids_IPO.npy"

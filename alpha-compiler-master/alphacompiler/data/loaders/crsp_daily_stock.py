@@ -72,13 +72,13 @@ def from_crsp_dump(file_name, start=None, end=None):
                                                row0["PRIMEXCH"]))
 
             if pd.isnull(row0["TSYMBOL"]):
-                print "no ticker skipping"
+                print ("no ticker skipping")
                 continue
 
             # check to see if there are missing dates in the middle
             this_cal = us_calendar[(us_calendar >= df_tkr.index[0]) & (us_calendar <= df_tkr.index[-1])]
             if len(this_cal) != df_tkr.shape[0]:
-                print "MISSING interstitial dates for: %s please fix" % row0["TSYMBOL"]
+                print ("MISSING interstitial dates for: %s please fix" % row0["TSYMBOL"])
                 sys.exit()
 
             # update metadata; 'start_date', 'end_date', 'auto_close_date',

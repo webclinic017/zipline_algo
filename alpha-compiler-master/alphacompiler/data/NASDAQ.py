@@ -9,11 +9,12 @@ Created by Peter Harrington (pbharrin) on 10/25/17.
 from zipline.pipeline.factors import CustomFactor
 import numpy as np
 import os
+from pathlib import Path
 
 # TODO: Sharadr also has two types of sector codes: http://www.sharadar.com/meta/tickers.json
 
 # TODO: make this a paramater
-BASE_PATH = os.path.dirname(os.path.realpath(__file__))
+BASE_PATH = str(Path.home())
 SID_FILE = "NASDAQ_sids.npy"
 
 class NASDAQSectorCodes(CustomFactor):

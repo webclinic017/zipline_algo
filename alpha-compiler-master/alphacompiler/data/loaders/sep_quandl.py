@@ -76,7 +76,7 @@ def from_sep_dump(file_name, start=None, end=None):
             # check to see if there are missing dates in the middle
             this_cal = us_calendar[(us_calendar >= df_tkr.index[0]) & (us_calendar <= df_tkr.index[-1])]
             if len(this_cal) != df_tkr.shape[0]:
-                print "MISSING interstitial dates for: %s using forward fill" % row0["ticker"]
+                print ("MISSING interstitial dates for: %s using forward fill" % row0["ticker"])
                 df_desired = pd.DataFrame(index=this_cal.tz_localize(None))
                 df_desired = df_desired.join(df_tkr)
                 df_tkr = df_desired.fillna(method='ffill')
