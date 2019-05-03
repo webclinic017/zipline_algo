@@ -57,6 +57,7 @@ class SparseDataFactor(CustomFactor):
 
 
     def cold_start(self, today, assets):
+        print(self.data_path)
         if self.data is None:
             self.data = np.load(self.data_path)
 
