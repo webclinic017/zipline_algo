@@ -328,13 +328,14 @@ def handle_data(context, data):
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
+
+                stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+                stop_list = stop_list.append(stop_loss)
             except Exception as e:
                 print(e)
 
-            print("Stop loss triggered for: {} on {}".format(position.asset.symbol, data.current_dt.strftime('%d/%m/%Y')))
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
-
+        print("Stop loss triggered for: {} on {}".format(position.asset.symbol,
+                                                         data.current_dt.strftime('%d/%m/%Y')))
         # if net_gain_loss > 25:
         #     order_target(position.asset, 0)
         #     print("Profit booked for: {} on {}".format(position.asset.symbol, data.current_dt.strftime('%d/%m/%Y')))

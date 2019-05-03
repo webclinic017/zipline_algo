@@ -440,6 +440,10 @@ def handle_data(context, data):
             # the list again on the next day
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
+
+                # add to stop loss list to prevent re-buy
+                stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+                stop_list = stop_list.append(stop_loss)
             except Exception as e:
                 print(e)
 
@@ -513,7 +517,7 @@ if __name__ == '__main__':
     start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
 
     # end date for the backtest in yyyymmdd format string
-    end_date = '20180331'
+    end_date = '20190331'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
     # The run_algorithm is a function provided by zipline that initializes and calls all the functions like before_
@@ -525,4 +529,4 @@ if __name__ == '__main__':
     plot_alpha_beta(ax[2, 1], results)
     plot_sharpe(ax[2, 0], results)
     fig.canvas.draw()
-    print(results)
+    input("Press any key to exit")
