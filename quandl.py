@@ -23,6 +23,7 @@ ONE_MEGABYTE = 1024 * 1024
 QUANDL_DATA_URL = (
     # 'https://www.quandl.com/api/v3/datatables/WIKI/PRICES.csv?'
     'https://www.quandl.com/api/v3/datatables/SHARADAR/SEP.csv?'
+    # 'https://www.quandl.com/api/v3/datatables/SHARADAR/SEP.csv?'
 )
 
 QUANDL_DATA_ACTION_URL = (
@@ -77,7 +78,7 @@ def load_data_table(file,
                     log.info('Parsing raw data.')
                 data_table_tickers = pd.read_csv(
                     table_file,
-                    index_col='ticker',
+                    # index_col='ticker',
                     usecols=[
                         'ticker',
                         # 'action',
@@ -142,11 +143,17 @@ def load_data_table(file,
     # data_table_action = data_table_action.set_index(['date', 'ticker'])
     # data_table = data_table.set_index(['date', 'ticker'])
     data_table = pd.merge(data_table, data_table_action, how='left', on=['date', 'ticker'])
-    # data_table = pd.merge(data_table, data_table_tickers.drop_duplicates(), how='left', on=['ticker'])
+    data_table = pd.merge(data_table, data_table_tickers.drop_duplicates(), how='left', on=['ticker'])
     data_table.loc[:, ['value']] = data_table.value.fillna(1)
-    tickers = data_table_tickers.loc[
-        (data_table_tickers['exchange'] == 'NYSE')]
-    data_table = data_table.loc[data_table['ticker'].isin(tickers.index)]
+
+    # tickers = data_table_tickers.loc[
+    #     (data_table_tickers['exchange'] == 'NYSE')]
+
+    # if you want to bring all the symbols please comment below line
+    # once you do the change here you will have to deploy this file to your env
+    # find env path by "conda env list"
+    # C:\ProgramData\Anaconda3\envs\zipline\Lib\site-packages\zipline\data\bundles (example path)
+    # data_table = data_table.loc[data_table['ticker'].isin(tickers.index)]
     data_table.rename(
         columns={
             'ticker': 'symbol',
@@ -235,7 +242,7 @@ def gen_asset_metadata(data, show_progress):
     del data['date']
     data.columns = data.columns.get_level_values(0)
 
-    data['exchange'] = 'QUANDL'
+    # data['exchange'] = 'QUANDL'
     data['auto_close_date'] = data['end_date'].values + pd.Timedelta(days=1)
     return data
 
@@ -318,8 +325,12 @@ def quandl_bundle(environ,
         raw_data[['symbol', 'date']],
         show_progress
     )
-    # asset_metadata = pd.merge(asset_metadata, raw_data[['symbol', 'exchange']], how='left', on=['symbol'])
+    asset_metadata = pd.merge(asset_metadata, raw_data[['symbol', 'exchange']].drop_duplicates(), how='left', on=['symbol'])
     asset_db_writer.write(asset_metadata)
+
+    # now drop echange and is delisted columns
+    del raw_data['exchange']
+    del raw_data['isdelisted']
 
     symbol_map = asset_metadata.symbol
     sessions = calendar.sessions_in_range(start_session, end_session)
