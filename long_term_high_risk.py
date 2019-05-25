@@ -258,6 +258,7 @@ def rebalance(context, data):
     if len(position_list) < 25:
         for stock in interested_assets.index.values:
             # only buy if not part of positions already
+            # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 if avg_vol < 10000:

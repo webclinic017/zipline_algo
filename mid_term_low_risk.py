@@ -340,6 +340,7 @@ def rebalance(context, data):
         # Loop through all the stocks shortlisted in the interested_assets
         for stock in interested_assets.index.values:
             # only buy if not part of positions already
+            # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
 
                 # Calculate 50day average volume for the stock

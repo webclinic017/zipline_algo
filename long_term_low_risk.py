@@ -259,6 +259,7 @@ def rebalance(context, data):
     # Buy logic
     if len(position_list) < 25:
         for stock in interested_assets.index.values:
+            # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
 
                 # Condition 1
