@@ -312,13 +312,13 @@ def handle_data(context, data):
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
+
+                print("Stop loss triggered for: "+position.asset.symbol)
+                # add to stop loss list to prevent re-buy
+                stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
+                stop_list = stop_list.append(stop_loss)
             except Exception as e:
                 print(e)
-
-            print("Stop loss triggered for: "+position.asset.symbol)
-            # add to stop loss list to prevent re-buy
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
 
     context.stop_loss_list = stop_list
     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))

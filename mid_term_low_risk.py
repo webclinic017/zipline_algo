@@ -442,16 +442,12 @@ def handle_data(context, data):
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
 
+                print("Stop loss triggered for: " + position.asset.symbol)
                 # add to stop loss list to prevent re-buy
                 stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
                 stop_list = stop_list.append(stop_loss)
             except Exception as e:
                 print(e)
-
-            print("Stop loss triggered for: "+position.asset.symbol)
-            # add to stop loss list to prevent re-buy
-            stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
-            stop_list = stop_list.append(stop_loss)
 
     # updating the global stop_loss_list with the locally maintained one
     context.stop_loss_list = stop_list

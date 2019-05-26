@@ -249,7 +249,7 @@ def rebalance(context, data):
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
             context.turnover_count += 1
-            # print("Half profit booking done for {}".format(position.asset.symbol))
+            print("Half profit booking done for {}".format(position.asset.symbol))
 
     position_list = []
     for position in positions:
@@ -271,9 +271,6 @@ def rebalance(context, data):
                 if (price * min_vol) < 11000 or avg_vol < 10000:
                     continue
 
-                if stock.symbol == 'SYNX':
-                    print("Hold")
-
                 price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
                 quantity = get_exposure(context.portfolio.portfolio_value,
@@ -287,8 +284,8 @@ def rebalance(context, data):
                         context.sector_stocks.update({sector: [stock]})
                     else:
                         context.sector_stocks[sector].append(stock)
-                    # print("Buy order triggered for: {} on {} for {} shares"
-                    #       .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
+                    print("Buy order triggered for: {} on {} for {} shares"
+                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
                 position_list.append(stock)
                 # limit the max position to 25 at all stages
                 if len(position_list) >= 25:
@@ -324,7 +321,7 @@ def handle_data(context, data):
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
 
-                # print("Stop loss triggered for: "+position.asset.symbol)
+                print("Stop loss triggered for: "+position.asset.symbol)
                 # add to stop loss list to prevent re-buy
                 stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
                 stop_list = stop_list.append(stop_loss)
@@ -354,7 +351,7 @@ def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
 
 
 def sell_all(positions, context):
-    # print("Sell All rule triggered for "+str(len(positions)))
+    print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
         context.turnover_count += 1

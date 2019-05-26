@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/US-Algo.iml" filepath="$PROJECT_DIR$/.idea/US-Algo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/zipline_algo.iml" filepath="$PROJECT_DIR$/.idea/zipline_algo.iml" />
     </modules>
   </component>
 </project>
