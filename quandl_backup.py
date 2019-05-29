@@ -326,6 +326,7 @@ def quandl_bundle(environ,
         show_progress
     )
     asset_metadata = pd.merge(asset_metadata, raw_data[['symbol', 'exchange']].drop_duplicates(), how='left', on=['symbol'])
+    asset_metadata.loc[asset_metadata.exchange.isna(), ['exchange']] = 'NA'
     asset_db_writer.write(asset_metadata)
 
     # now drop echange and is delisted columns
