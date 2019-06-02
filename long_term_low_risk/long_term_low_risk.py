@@ -6,25 +6,9 @@ from zipline.pipeline import Pipeline
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
-from zipline.api import (
-    get_datetime,
-    attach_pipeline,
-    order_target_percent,
-    order_target,
-    pipeline_output,
-    record,
-    schedule_function,
-    get_environment
-)
-from utils.plot_util import (
-    plot_returns,
-    plot_drawdown,
-    plot_positions,
-    plot_leverage,
-    get_benchmark_returns,
-    plot_alpha_beta,
-    plot_sharpe
-)
+from zipline.api import (get_datetime, attach_pipeline, order_target_percent, order_target, pipeline_output,
+                         record, schedule_function, get_environment)
+import utils.plot_util as ut
 from utils.log_utils import setup_logging
 
 # stop loss non addition limit set to 15 days
@@ -163,7 +147,7 @@ def recordvars(context, data):
 
     algo_returns_cum = 100 * ((1 + port_history['returns']).cumprod() - 1)
 
-    benchmark_returns = 1 + get_benchmark_returns(context)
+    benchmark_returns = 1 + ut.get_benchmark_returns(context)
     benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
     benchmarkdd = min(0, 100 * ((benchmark_returns_cum[-1]) - max(benchmark_returns_cum)) / (
             100 + max(benchmark_returns_cum)))
@@ -181,10 +165,10 @@ def recordvars(context, data):
         ax = context.ax
         fig = context.fig
 
-        plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
-        plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
-        plot_positions(ax[1, 0], port_history['num_pos'])
-        plot_leverage(ax[1, 1], port_history['leverage'])
+        ut.plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
+        ut.plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
+        ut.plot_positions(ax[1, 0], port_history['num_pos'])
+        ut.plot_leverage(ax[1, 1], port_history['leverage'])
         fig.canvas.draw()  # draw
         plt.pause(0.01)
 
@@ -385,7 +369,7 @@ if __name__ == '__main__':
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
                             before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
 
-    plot_alpha_beta(ax[2, 1], results)
-    plot_sharpe(ax[2, 0], results)
+    ut.plot_alpha_beta(ax[2, 1], results)
+    ut.plot_sharpe(ax[2, 0], results)
     fig.canvas.draw()
     input("Press any key to exit")
