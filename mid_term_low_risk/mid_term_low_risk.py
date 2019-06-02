@@ -6,8 +6,6 @@ from zipline.pipeline import Pipeline
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
-import logging
-import datetime
 from zipline.api import (
     get_datetime,
     attach_pipeline,
@@ -27,6 +25,7 @@ from utils.plot_util import (
     plot_alpha_beta,
     plot_sharpe
 )
+from utils.log_utils import setup_logging
 
 """
     Every time a stock is removed because of breaching the stop loss limit, it is added to a stop_loss_list along with 
@@ -52,8 +51,9 @@ dma = 200
 
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
-name = "mt_lr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
-logging.basicConfig(filename=name, level=logging.INFO)
+logger = setup_logging("mt_lr")
+# name = "mt_lr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
+# logging.basicConfig(filename=name, level=logging.INFO)
 
 
 def initialize(context):
