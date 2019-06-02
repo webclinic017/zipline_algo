@@ -52,8 +52,6 @@ dma = 200
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
 logger = setup_logging("mid_term_low_risk")
-# name = "mt_lr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
-# logging.basicConfig(filename=name, level=logging.INFO)
 
 
 def initialize(context):

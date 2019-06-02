@@ -3,8 +3,6 @@ from zipline.utils.run_algo import run_algorithm
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
-import logging
-import datetime
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
@@ -27,6 +25,7 @@ from utils.plot_util import (
     plot_alpha_beta,
     plot_sharpe
 )
+from utils.log_utils import setup_logging
 
 # stop loss non addition limit set to 5 days
 stop_loss_prevention_days = 15
@@ -34,8 +33,7 @@ stop_loss_prevention_days = 15
 max_sector_exposure = 0.15
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
-name = "mt_hr_{}.log".format(str(datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")))
-logging.basicConfig(filename=name, level=logging.INFO)
+logger = setup_logging("long_term_high_risk")
 
 
 def initialize(context):
@@ -89,28 +87,28 @@ def initialize(context):
 def analyze(context, data):
     print("Finalize is called")
     monthly_freq = context.monthly_df.pct_change().fillna(0)
-    logging.info("Monthly Returns and Drawdowns")
+    logger.info("Monthly Returns and Drawdowns")
     all_history = context.port_history.reset_index()
     for index, row in monthly_freq.iterrows():
-        logging.info("{} Return: {}%".format(index.strftime('%b %Y'), str(round(row['portfolio_net']*100, 2))))
+        logger.info("{} Return: {}%".format(index.strftime('%b %Y'), str(round(row['portfolio_net']*100, 2))))
 
         current_month_loc = context.monthly_df.index.get_loc(index)
         if current_month_loc != 0:
             max_dd = all_history[(all_history['index'] <= index) &
                                  (all_history['index'] > context.monthly_df.iloc[current_month_loc - 1].name)]['algodd'].min()
-            logging.info("{} Max dd: {}%".format(index.strftime('%b %Y'), str(round(max_dd))))
+            logger.info("{} Max dd: {}%".format(index.strftime('%b %Y'), str(round(max_dd))))
 
-    logging.info("Annual Returns and Drawdowns")
+    logger.info("Annual Returns and Drawdowns")
     annual_freq = context.annual_df.pct_change().fillna(0)
     for index, row in annual_freq.iterrows():
-        logging.info("{} Return: {}%".format(index.strftime('%Y'), str(round(row['portfolio_net'] * 100, 2))))
+        logger.info("{} Return: {}%".format(index.strftime('%Y'), str(round(row['portfolio_net'] * 100, 2))))
 
         current_year_loc = context.annual_df.index.get_loc(index)
         if current_year_loc != 0:
             max_dd = all_history[(all_history['index'] <= index) &
                                  (all_history['index'] > context.annual_df.iloc[current_year_loc - 1].name)][
                 'algodd'].min()
-            logging.info("{} Max dd: {}%".format(index.strftime('%Y'), str(round(max_dd))))
+            logger.info("{} Max dd: {}%".format(index.strftime('%Y'), str(round(max_dd))))
 
 
 def make_pipeline():
@@ -205,7 +203,7 @@ def monthly_records(context, data):
     if history.index.strftime('%m')[0] == '12':
         context.annual_df = context.annual_df.append(history)
 
-        logging.info("{} Turnover count: {}".format(history.index.strftime('%Y')[0], context.turnover_count))
+        logger.info("{} Turnover count: {}".format(history.index.strftime('%Y')[0], context.turnover_count))
         # Reset Turnover count
         context.turnover_count = 0
 
