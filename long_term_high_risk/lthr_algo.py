@@ -11,6 +11,7 @@ from zipline.api import (get_datetime, attach_pipeline, order_target_percent, or
                          record, schedule_function, get_environment)
 import utils.plot_util as ut
 from utils.log_utils import setup_logging
+from long_term_high_risk.lthr_config import config
 
 # stop loss non addition limit set to 5 days
 stop_loss_prevention_days = 15
@@ -341,14 +342,12 @@ def get_dma_returns(context, period, dma_end_date):
 
 
 if __name__ == '__main__':
-    start_date = '20000101'
-    start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
-
-    end_date = '20180331'
-    end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
+    start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
+    end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
-                            before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
+                            before_trading_start=before_trading_start, bundle='quandl',
+                            capital_base=config.get('capital_base'))
     ut.plot_alpha_beta(ax[2, 1], results)
     ut.plot_sharpe(ax[2, 0], results)
     fig.canvas.draw()

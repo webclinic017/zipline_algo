@@ -3,6 +3,7 @@ from zipline.utils.run_algo import run_algorithm
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
+import datetime
 import matplotlib.pyplot as plt
 from zipline.utils.events import date_rules, time_rules
 import numpy as np
@@ -10,28 +11,32 @@ from zipline.api import (get_datetime, attach_pipeline, order_target_percent, or
                          record, schedule_function, get_environment)
 import utils.plot_util as ut
 from utils.log_utils import setup_logging
+from mid_term_high_risk.mthr_config import config
 
 # stop loss non addition limit set to 15 days
-stop_loss_prevention_days = 15
-
+stop_loss_prevention_days = 25
 # max exposure per sector set to 15%
-max_sector_exposure = 0.21
+max_sector_exposure = 0.15
 fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
-logger = setup_logging("long_term_low_risk")
+logger = setup_logging("mid_term_high_risk")
 
 
 def initialize(context):
     global fig, ax
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
+    context.count = 0
+
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
+
     schedule_function(
         rebalance,
-        date_rule=date_rules.month_start()
+        date_rule=date_rules.week_start()
     )
 
+    # set up dataframe to record equity with loan value history
     port_history = pd.DataFrame(np.empty(0, dtype=[
         ('date', 'datetime64[ns]'),
         ('portfolio_net', 'float'),
@@ -48,6 +53,7 @@ def initialize(context):
     context.annual_df = pd.DataFrame()
     context.turnover_count = 0
 
+    # record variables every day after market close
     schedule_function(recordvars,
                       date_rule=date_rules.every_day(),
                       time_rule=time_rules.market_close())
@@ -115,6 +121,7 @@ def make_pipeline():
 
 
 def recalc_sector_wise_exposure(context):
+    # loop thru all the positions
     net = context.portfolio.portfolio_value
     for sector, stocks in context.sector_stocks.items():
         sector_exposure = 0
@@ -190,38 +197,33 @@ def monthly_records(context, data):
 
 def rebalance(context, data):
     positions = list(context.portfolio.positions.values())
-    pipeline_data = context.pipeline_data
     cash = context.portfolio.cash
     stop_list = context.stop_loss_list
+    pipeline_data = context.pipeline_data
 
     recalc_sector_wise_exposure(context)
 
-    benchmark_dma = get_dma_returns(context, 200, data.current_dt)
+    benchmark_dma = get_dma_returns(context, 70, data.current_dt)
     if benchmark_dma < 0:
         return
 
+    # remove assests with no market cap
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
     # filter assets based on
-    # 1. market cap is large cap (>10billion)
+    # 1. market cap is small cap (300million to 2billion)
     # 2. liabilities < 180bn
-    # 3. yoy sales > 3% or none
-    # 4. ipo should be earlier than at least two years or n/a
-    # 5. should have invested more than or equal 6% of total revenue in RND
-    # 6. net income should be positive
-    # 7. should not have a decrease in earnings
-    interested_assets = interested_assets.query("marketcap > 10000000000 "
+    # 3. yoy sales > 20%
+    # 4. ipo should be earlier than at least two years
+    # 5 sort by qoq_earnings
+    interested_assets = interested_assets.query("marketcap < 2000000000 "
+                                                "and marketcap > 300000000"
                                                 "and liabilities < 180000000000 "
-                                                "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
+                                                "and (yoy_sales >= 0.2 or yoy_sales != yoy_sales)"
                                                 "and (ipoyear < {} or ipoyear == -1)"
-                                                "and ((100 * rnd) / revenue) >= 6"
-                                                "and netinc >= 0"
-                                                "and qoq_earnings >= 0"
+                                                "and pe < 300"
                                                 .format(data.current_dt.year - 2))
 
-    # sort the buy candidate stocks based on their quarterly earnings
-    interested_assets = interested_assets.replace([np.inf, -np.inf], np.nan)
-    interested_assets = interested_assets.dropna(subset=['qoq_earnings'])
     interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
 
     net = context.portfolio.portfolio_value
@@ -240,10 +242,9 @@ def rebalance(context, data):
     # Buy logic
     if len(position_list) < 25:
         for stock in interested_assets.index.values:
+            # only buy if not part of positions already
             # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
-
-                # Condition 1
                 # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 # if avg_vol < 10000:
                 #     continue
@@ -251,19 +252,12 @@ def rebalance(context, data):
                 avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 min_vol = data.history(stock, 'volume', 50, '1d').min()
                 price = data.history(stock, 'price', 1, '1d').item()
-                if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
+                if (price * min_vol) < 11000 or avg_vol < 10000:
                     continue
-
-                # # Condition 2
-                # month_old_price = data.history(stock, 'close', 22, '1d')
-                # monthly_gain_loss = float(
-                #     "{0:.2f}".format((month_old_price[-1] - month_old_price[0]) * 100 / month_old_price[0]))
-                # if monthly_gain_loss < -5:
-                #     continue
 
                 price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
-                quantity = get_quantity(context.portfolio.portfolio_value,
+                quantity = get_exposure(context.portfolio.portfolio_value,
                                         context.sector_wise_exposure, sector, price, cash)
 
                 if quantity > 0 and data.can_trade(stock):
@@ -277,6 +271,7 @@ def rebalance(context, data):
                     print("Buy order triggered for: {} on {} for {} shares"
                           .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
                 position_list.append(stock)
+                # limit the max position to 25 at all stages
                 if len(position_list) >= 25:
                     break
 
@@ -287,12 +282,13 @@ def handle_data(context, data):
 
     # update stop loss list
     for i1, s1 in stop_list.items():
+
         stop_list = stop_list.drop(index=[i1])
         s1 -= 1
         if s1 > 0:
             stop_list = stop_list.append(pd.Series([s1], index=[i1]))
 
-    benchmark_dma = get_dma_returns(context, 200, data.current_dt)
+    benchmark_dma = get_dma_returns(context, 70, data.current_dt)
     if benchmark_dma < 0:
         sell_all(positions, context)
         return
@@ -301,43 +297,38 @@ def handle_data(context, data):
     position_list = []
     for position in positions:
         position_list.append(position.asset)
-        # month_old_price = data.history(position.asset, 'close', 22, '1d')[:1][0]
-        # monthly_gain_loss = float(
-        #     "{0:.2f}".format((position.last_sale_price - month_old_price) * 100 / month_old_price))
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
+        # sell at stop loss
+        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
 
-                print("Stop loss triggered for: {} on {}".format(position.asset.symbol,
-                                                                 data.current_dt.strftime('%d/%m/%Y')))
+                print("Stop loss triggered for: "+position.asset.symbol)
+                # add to stop loss list to prevent re-buy
                 stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
                 stop_list = stop_list.append(stop_loss)
             except Exception as e:
-                print(e)
-
-        # if net_gain_loss > 25:
-        #     order_target(position.asset, 0)
-        #     print("Profit booked for: {} on {}".format(position.asset.symbol, data.current_dt.strftime('%d/%m/%Y')))
+                context.count += 1
+                print(str(context.count) + " : " + str(e) + " : " + str(position.asset.symbol))
 
     context.stop_loss_list = stop_list
     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
-def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
+def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
     available_exposure = cash / portfolio_value
     if sector in sector_wise_exposure:
         sector_exposure = sector_wise_exposure.get(sector)
         if sector_exposure < max_sector_exposure:
-            exposure = min(max_sector_exposure - sector_exposure, 0.07, available_exposure)
+            exposure = min(max_sector_exposure - sector_exposure, 0.05, available_exposure)
             exposure = round(exposure, 4)
             sector_wise_exposure[sector] += exposure
         else:
             exposure = 0
     else:
-        exposure = min(0.07, available_exposure)
+        exposure = min(0.05, available_exposure)
         sector_wise_exposure[sector] = exposure
     quantity = int((exposure * portfolio_value) / price)
     return quantity
@@ -351,23 +342,21 @@ def sell_all(positions, context):
 
 
 def get_dma_returns(context, period, dma_end_date):
-    returns = context.trading_environment.benchmark_returns[:dma_end_date]
-    if returns.size > period:
-        returns = 1 + returns[-period:]
-    else:
+    dma_start_date = dma_end_date - datetime.timedelta(days=period)
+    returns = 1 + context.trading_environment.benchmark_returns.loc[dma_start_date: dma_end_date]
+    if returns.size < 50:
         return 0
     dma_return = 100 * (returns.prod() - 1)
     return dma_return
 
 
 if __name__ == '__main__':
-    start_date = '20000101'
-    start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
-    end_date = '20180331'
-    end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
+    start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
+    end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
-                            before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
+                            before_trading_start=before_trading_start, bundle='quandl',
+                            capital_base=config.get('capital_base'))
 
     ut.plot_alpha_beta(ax[2, 1], results)
     ut.plot_sharpe(ax[2, 0], results)

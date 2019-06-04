@@ -10,6 +10,7 @@ from zipline.api import (get_datetime, attach_pipeline, order_target_percent, or
                          record, schedule_function, get_environment)
 import utils.plot_util as ut
 from utils.log_utils import setup_logging
+from mid_term_low_risk.mtlr_config import config
 
 """
     Every time a stock is removed because of breaching the stop loss limit, it is added to a stop_loss_list along with 
@@ -490,21 +491,17 @@ def get_dma_returns(context, period, dma_end_date):
 
 
 if __name__ == '__main__':
-    # start date for the backtest in yyyymmdd format string
-    start_date = '20000101'
     # converting date string to date
-    start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
-
-    # end date for the backtest in yyyymmdd format string
-    end_date = '20190331'
-    end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
+    start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
+    end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
     # The run_algorithm is a function provided by zipline that initializes and calls all the functions like before_
     # trading_start, handle_data etc etc in the prescribed order, thereby running our backtest from the defined
     # start till the end date, doing all the buy and sells with the starting capital defined as capital_base and using
     # the data bundle defined as bundle (in our case quandl
     results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
-                            before_trading_start=before_trading_start, bundle='quandl', capital_base=100000)
+                            before_trading_start=before_trading_start, bundle='quandl',
+                            capital_base=config.get('capital_base'))
     ut.plot_alpha_beta(ax[2, 1], results)
     ut.plot_sharpe(ax[2, 0], results)
     fig.canvas.draw()
