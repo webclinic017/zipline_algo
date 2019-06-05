@@ -68,7 +68,8 @@ class Analyzer:
             report_dict = {}
             benchmark_report_dict = {}
 
-            report_dict['total_return'] = (daily_returns + 1).prod() - 1
+            report_dict['total_return_pct'] = (daily_returns + 1).prod() - 1
+            report_dict['total_return'] = self.daily_data_df.iloc[-1].net - self.daily_data_df.iloc[-2].net
             report_dict['ytd'] = (ytd_returns + 1).prod() - 1
             report_dict['one_year'] = (one_year_daily_returns + 1).prod() - 1
             report_dict['max_drawdown'] = portfolio_dd.min()
@@ -78,7 +79,8 @@ class Analyzer:
             report_dict['cagr'] = empyrical.cagr(daily_returns)
             report_dict['std'] = daily_returns.std() * 100
 
-            benchmark_report_dict['total_return'] = (benchmark_returns + 1).prod() - 1
+            benchmark_report_dict['total_return_pct'] = (benchmark_returns + 1).prod() - 1
+            benchmark_report_dict['total_return'] = 0
             benchmark_report_dict['ytd'] = (ytd_benchmark_returns + 1).prod() - 1
             benchmark_report_dict['one_year'] = (one_year_benchmark_returns + 1).prod() - 1
             benchmark_report_dict['max_drawdown'] = benchmark_dd.min()
