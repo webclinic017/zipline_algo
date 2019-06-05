@@ -3,6 +3,8 @@ from PyQt5 import QtWidgets
 from analyzer.views.spinnerwidget import QtWaitingSpinner
 from analyzer.views.group_box import GroupConfigBoxWidget
 from PyQt5.QtGui import QColor
+import itertools
+import numpy as np
 
 
 class OverviewTab(AnalysisTab):
@@ -61,10 +63,10 @@ class OverviewWidget(QtWidgets.QTableWidget):
         returns_grid = QtWidgets.QGridLayout()
         self.returns_labels = ['Returns (%)', 'Returns ($)', 'CAGR', 'YTD']
 
-        self.strategy_returns = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self),
+        self.strategy_returns = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0', self),
                                  QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self)]
 
-        self.benchmark_returns = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self),
+        self.benchmark_returns = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('-', self),
                                   QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self)]
 
         for col, label, strategy_return, benchmark_return in zip(range(1, len(self.returns_labels) + 1),
@@ -131,17 +133,16 @@ class OverviewWidget(QtWidgets.QTableWidget):
 
         self.volatility_labels = ['Max Drawdown', 'Std Dev']
 
-        self.strategy_volatility = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self)]
+        self.strategy_volatility = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0', self)]
 
-        self.benchmark_volatility = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0%', self)]
+        self.benchmark_volatility = [QtWidgets.QLabel('0%', self), QtWidgets.QLabel('0', self)]
 
         for col, label, strategy_return, benchmark_return in zip(range(1, len(self.volatility_labels) + 1),
                                                                  self.volatility_labels,
                                                                  self.strategy_volatility,
                                                                  self.benchmark_volatility):
             volatility_grid.addWidget(
-                QtWidgets.QLabel("<font color='#666666'><strong>" + label + "</font></strong>"),
-                0, col)
+                QtWidgets.QLabel("<font color='#666666'><strong>" + label + "</font></strong>"), 0, col)
             volatility_grid.addWidget(strategy_return, 1, col)
             volatility_grid.addWidget(benchmark_return, 2, col)
 
@@ -175,4 +176,49 @@ class OverviewWidget(QtWidgets.QTableWidget):
 
     def plot(self, analysis_data):
         self.spinner.stop()
-        self.test_label.setText(analysis_data.info_data.get('algo_name'))
+
+        if analysis_data.strategy_report is not None and analysis_data.benchmark_report is not None:
+            strategy_data = analysis_data.strategy_report
+            benchmark_data = analysis_data.benchmark_report
+
+            self.strategy_returns[0].setText('{:.2f}%'.format(100 * strategy_data['total_return_pct']))
+            self.strategy_returns[1].setText('{:.2f}'.format(100 * strategy_data['total_return']))
+            self.strategy_returns[2].setText('{:.2f}%'.format(100 * strategy_data['cagr']))
+            self.strategy_returns[3].setText('{:.2f}%'.format(100 * strategy_data['ytd']))
+
+            self.benchmark_returns[0].setText('{:.2f}%'.format(100 * benchmark_data['total_return_pct']))
+            self.benchmark_returns[2].setText('{:.2f}%'.format(100 * benchmark_data['cagr']))
+            self.benchmark_returns[3].setText('{:.2f}%'.format(100 * benchmark_data['ytd']))
+
+            for returns in itertools.chain(self.strategy_returns, self.benchmark_returns):
+                if returns.text() != "-":
+                    number = float(returns.text().replace("%", ""))
+                    if number > 0:
+                        returns.setStyleSheet('color: blue')
+                    elif number < 0:
+                        returns.setStyleSheet('color: red')
+                    else:
+                        returns.setStyleSheet('color: grey')
+
+            if np.isnan(strategy_data['alpha']):
+                strategy_data['alpha'] = 0
+            if np.isnan(strategy_data['sharpe_ratio']):
+                strategy_data['sharpe_ratio'] = 0
+
+            self.strategy_ratios[0].setText('{:.2f}'.format(strategy_data['alpha']))
+            self.strategy_ratios[1].setText('{:.2f}'.format(strategy_data['beta']))
+            self.strategy_ratios[2].setText('{:.2f}'.format(strategy_data['sharpe_ratio']))
+            # self.strategy_ratios[3].setText('{:.2f}'.format(strategy_data['win_ratio']))
+
+            self.benchmark_ratios[0].setText('{:.2f}'.format(benchmark_data['alpha']))
+            self.benchmark_ratios[1].setText('{:.2f}'.format(benchmark_data['beta']))
+            self.benchmark_ratios[2].setText('{:.2f}'.format(benchmark_data['sharpe_ratio']))
+            # self.benchmark_ratios[3].setText('{:.2f}'.format(benchmark_data['win_ratio']))
+
+            self.strategy_volatility[0].setText('{:.2f}%'.format(100 * strategy_data['max_drawdown']))
+            self.strategy_volatility[1].setText('{:.2f}'.format(strategy_data['std']))
+
+            self.benchmark_volatility[0].setText('{:.2f}%'.format(100 * benchmark_data['max_drawdown']))
+            self.benchmark_volatility[1].setText('{:.2f}'.format(benchmark_data['std']))
+
+
