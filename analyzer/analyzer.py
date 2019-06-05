@@ -70,7 +70,7 @@ class Analyzer:
             benchmark_report_dict = {}
 
             report_dict['total_return_pct'] = (daily_returns + 1).prod() - 1
-            report_dict['total_return'] = self.daily_data_df.iloc[-1].net - self.daily_data_df.iloc[-2].net
+            report_dict['total_return'] = self.daily_data_df.iloc[-1].net - self.daily_data_df.iloc[0].net
             report_dict['ytd'] = (ytd_returns + 1).prod() - 1
             report_dict['one_year'] = (one_year_daily_returns + 1).prod() - 1
             report_dict['max_drawdown'] = portfolio_dd.min()
