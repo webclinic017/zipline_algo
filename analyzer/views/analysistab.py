@@ -21,7 +21,7 @@ class AnalysisTab(QtWidgets.QWidget):
         pass
 
     @abstractmethod
-    def update_plot(self):
+    def update_plot(self, analysis_data):
         pass
 
     def generate_report(self):

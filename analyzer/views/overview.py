@@ -22,8 +22,8 @@ class OverviewTab(AnalysisTab):
     def get_tab_description(self):
         return "Some description"
 
-    def update_plot(self):
-        self.plotter.plot()
+    def update_plot(self, analysis_data):
+        self.plotter.plot(analysis_data)
 
     def generate_report(self):
         pass
@@ -34,6 +34,7 @@ class OverviewWidget(QtWidgets.QTableWidget):
         super(QtWidgets.QWidget, self).__init__(parent)
 
         # configure layout
+        self.test_label = QtWidgets.QLabel('Testing', self)
 
-    def plot(self):
-        pass
+    def plot(self, analysis_data):
+        self.test_label.setText(analysis_data.info_data.get('algo_name'))

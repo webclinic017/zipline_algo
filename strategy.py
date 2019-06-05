@@ -3,11 +3,12 @@ import threading
 import sys
 from analyzer.analyzer import Analyzer
 
-class Strategy():
+
+class Strategy:
 
     def __init__(self, strategy_data):
-        self.analyzer = Analyzer()
         self.strategy_data = strategy_data
+        self.analyzer = Analyzer(self)
 
     def initialize(self, context):
         self.strategy_data.get('initialize')(context)
