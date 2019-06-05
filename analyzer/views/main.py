@@ -20,7 +20,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.setMinimumHeight(720)
         self.setMinimumWidth(960)
 
-        overview_tab = OverviewTab(self)
+        overview_tab = OverviewTab(self, self.analysis_data)
 
         self.all_tabs_dict[overview_tab.get_tab_name()] = overview_tab
 
