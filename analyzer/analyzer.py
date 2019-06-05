@@ -86,7 +86,7 @@ class Analyzer:
             benchmark_report_dict['one_year'] = (one_year_benchmark_returns + 1).prod() - 1
             benchmark_report_dict['max_drawdown'] = benchmark_dd.min()
             benchmark_report_dict['sharpe_ratio'] = empyrical.sharpe_ratio(benchmark_returns)
-            benchmark_report_dict['alpha'], report_dict['beta'] = 0, 1
+            benchmark_report_dict['alpha'], benchmark_report_dict['beta'] = 0, 1
             benchmark_report_dict['cagr'] = empyrical.cagr(benchmark_returns)
             benchmark_report_dict['std'] = benchmark_returns.std() * 100
 
