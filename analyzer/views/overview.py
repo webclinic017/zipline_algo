@@ -77,10 +77,8 @@ class OverviewWidget(QtWidgets.QTableWidget):
 
         returns_grid.addWidget(QtWidgets.QLabel("<font color='#666666'><strong>Strategy</font></strong>", self), 1, 0)
         returns_grid.addWidget(
-            # QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data['benchmark_symbol']
-            #                  + "</font></strong>", self), 2, 0)
-        QtWidgets.QLabel("<font color='#666666'><strong>" + "temp sym"
-                         + "</font></strong>", self), 2, 0)
+            QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data['benchmark_symbol']
+                             + "</font></strong>", self), 2, 0)
         returns_grid.setSpacing(0)
         returns_gbox.setLayout(returns_grid)
 
@@ -112,11 +110,9 @@ class OverviewWidget(QtWidgets.QTableWidget):
             ratio_grid.addWidget(benchmark_return, 2, col)
 
         ratio_grid.addWidget(QtWidgets.QLabel("<font color='#666666'><strong>Strategy</font></strong>", self), 1, 0)
-        # ratio_grid.addWidget(
-        #     QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data[
-        #         'benchmark_symbol'] + "</font></strong>", self), 2, 0)
         ratio_grid.addWidget(
-            QtWidgets.QLabel("<font color='#666666'><strong>" + "temp sym" + "</font></strong>", self), 2, 0)
+            QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data['benchmark_symbol']
+                             + "</font></strong>", self), 2, 0)
 
         ratio_grid.setSpacing(0)
         ratio_gbox.setLayout(ratio_grid)
@@ -151,13 +147,9 @@ class OverviewWidget(QtWidgets.QTableWidget):
 
         volatility_grid.addWidget(QtWidgets.QLabel("<font color='#666666'><strong>Strategy</font></strong>", self),
                                   1, 0)
-        # volatility_grid.addWidget(
-        #     QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data[
-        #         'benchmark_symbol'] + "</font></strong>", self),
-        #     2, 0)
         volatility_grid.addWidget(
-            QtWidgets.QLabel("<font color='#666666'><strong>" + "temp sym" + "</font></strong>", self),
-            2, 0)
+            QtWidgets.QLabel("<font color='#666666'><strong>" + self.analysis_data.info_data['benchmark_symbol']
+                             + "</font></strong>", self), 2, 0)
 
         volatility_grid.setSpacing(0)
         volatility_gbox.setLayout(volatility_grid)
@@ -182,4 +174,5 @@ class OverviewWidget(QtWidgets.QTableWidget):
         return spinner
 
     def plot(self, analysis_data):
+        self.spinner.stop()
         self.test_label.setText(analysis_data.info_data.get('algo_name'))
