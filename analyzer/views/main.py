@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 import matplotlib.pyplot as plt
 from analyzer.views.overview import OverviewTab
+from analyzer.views.performance import PerformanceTab
 from analyzer.analysis_data import AnalysisData
 
 
@@ -14,21 +15,22 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data = analysis_data
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setWindowTitle('Some title')
+        self.setWindowTitle(self.analysis_data.info_data['algo_name'])
 
         plt.style.use('seaborn-bright')
         self.setMinimumHeight(720)
         self.setMinimumWidth(960)
 
         overview_tab = OverviewTab(self, self.analysis_data)
+        performance_tab = PerformanceTab(self, self.analysis_data)
 
         self.all_tabs_dict[overview_tab.get_tab_name()] = overview_tab
+        self.all_tabs_dict[performance_tab.get_tab_name()] = performance_tab
 
         self.main_widget = QtWidgets.QWidget(self)
 
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.setSpacing(10)
-
 
         self.tab_widget = TabWidget(self)
 
@@ -43,6 +45,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self.add_tab(overview_tab.get_tab_name())
+        self.add_tab(performance_tab.get_tab_name())
 
         # connect to event
         self.updateSignal.connect(self.update_plot)
@@ -62,6 +65,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         if tab_object is not None:
             tab_index = self.tab_widget.tabs.addTab(tab_object, name)
             self.tab_widget.tabs.setCurrentIndex(tab_index)
+
 
 class TabWidget(QtWidgets.QWidget):
     def __init__(self, parent):
