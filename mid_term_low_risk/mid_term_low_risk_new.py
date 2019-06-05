@@ -495,7 +495,8 @@ if __name__ == '__main__':
               'before_trading_start': before_trading_start,
               'bundle': 'quandl',
               'capital_base': 100000,
-              'algo_name': 'mid_term_low_risk'}
+              'algo_name': 'mid_term_low_risk',
+              'benchmark_symbol': 'SPY'}
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()

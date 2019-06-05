@@ -5,3 +5,5 @@ class AnalysisData:
         self.info_data = {}
         self.chart_data = {}
         self.orders_data = {}
+        self.strategy_report = None
+        self.benchmark_report = None

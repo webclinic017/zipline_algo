@@ -16,7 +16,7 @@ class Strategy:
 
     def handle_data(self, context, data):
         self.strategy_data.get('handle_data')(context, data)
-        self.analyzer.handle_data()
+        self.analyzer.handle_data(context)
 
     def analyze(self, context, data):
         self.strategy_data.get('analyze')(context, data)
