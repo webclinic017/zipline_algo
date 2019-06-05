@@ -53,6 +53,10 @@ class Analyzer:
 
             benchmark_returns = context.trading_environment.benchmark_returns.loc[self.daily_data_df.index[0]:self.daily_data_df.index[-1]]
             benchmark_returns.index = benchmark_returns.index.date
+
+            daily_returns = daily_returns.drop(daily_returns.index.difference(benchmark_returns.index))
+
+
             ytd_benchmark_returns = benchmark_returns[
                 benchmark_returns.index >= datetime.datetime(benchmark_returns.index[-1].year, 1, 1).date()]
 
@@ -68,19 +72,20 @@ class Analyzer:
             report_dict['ytd'] = (ytd_returns + 1).prod() - 1
             report_dict['one_year'] = (one_year_daily_returns + 1).prod() - 1
             report_dict['max_drawdown'] = portfolio_dd.min()
+
             report_dict['sharpe_ratio'] = empyrical.sharpe_ratio(daily_returns)
             report_dict['alpha'], report_dict['beta'] = empyrical.alpha_beta_aligned(daily_returns, benchmark_returns)
             report_dict['cagr'] = empyrical.cagr(daily_returns)
             report_dict['std'] = daily_returns.std() * 100
 
-            report_dict['total_return'] = (benchmark_returns + 1).prod() - 1
-            report_dict['ytd'] = (ytd_benchmark_returns + 1).prod() - 1
-            report_dict['one_year'] = (one_year_benchmark_returns + 1).prod() - 1
-            report_dict['max_drawdown'] = benchmark_dd.min()
-            report_dict['sharpe_ratio'] = empyrical.sharpe_ratio(benchmark_returns)
-            report_dict['alpha'], report_dict['beta'] = 0, 1
-            report_dict['cagr'] = empyrical.cagr(benchmark_returns)
-            report_dict['std'] = benchmark_returns.std() * 100
+            benchmark_report_dict['total_return'] = (benchmark_returns + 1).prod() - 1
+            benchmark_report_dict['ytd'] = (ytd_benchmark_returns + 1).prod() - 1
+            benchmark_report_dict['one_year'] = (one_year_benchmark_returns + 1).prod() - 1
+            benchmark_report_dict['max_drawdown'] = benchmark_dd.min()
+            benchmark_report_dict['sharpe_ratio'] = empyrical.sharpe_ratio(benchmark_returns)
+            benchmark_report_dict['alpha'], report_dict['beta'] = 0, 1
+            benchmark_report_dict['cagr'] = empyrical.cagr(benchmark_returns)
+            benchmark_report_dict['std'] = benchmark_returns.std() * 100
 
             plot_data_df = pd.concat([daily_returns, benchmark_returns], axis=1,
                                      keys=['returns', 'benchmark_returns'])
