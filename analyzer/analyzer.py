@@ -97,7 +97,7 @@ class Analyzer:
 
             plot_data_df['drawdown'] = portfolio_dd
 
-            portfolio_dd['benchmark_drawdown'] = benchmark_dd
+            plot_data_df['benchmark_drawdown'] = benchmark_dd
 
             plot_data_df.set_index('date', inplace=True)
 
