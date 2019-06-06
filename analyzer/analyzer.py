@@ -57,7 +57,6 @@ class Analyzer:
             daily_returns = daily_returns.drop(daily_returns.index.difference(benchmark_returns.index))
             benchmark_returns = benchmark_returns.drop(benchmark_returns.index.difference(daily_returns.index))
 
-
             ytd_benchmark_returns = benchmark_returns[
                 benchmark_returns.index >= datetime.datetime(benchmark_returns.index[-1].year, 1, 1).date()]
 
@@ -101,10 +100,33 @@ class Analyzer:
 
             plot_data_df.set_index('date', inplace=True)
 
-            self.analysis_data.chart_data = plot_data_df
+            # holdings data
+            holdings = pd.DataFrame(columns=['symbol',
+                                             'name',
+                                             'sector',
+                                             'avg_price',
+                                             'last_price',
+                                             'daily_change',
+                                             'pct_daily_change',
+                                             'total_change',
+                                             'pct_total_change',
+                                             'pct_port'])
 
+            holdings.at[0] = ['symbol',
+                               'name',
+                               'sector',
+                               'avg_price',
+                               'last_price',
+                               'daily_change',
+                               'pct_daily_change',
+                               'total_change',
+                               'pct_total_change',
+                               'pct_port']
+
+            self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
+            self.analysis_data.holdings_data = holdings
 
     def rolling_drawdown(self, returns):
         out = np.empty(returns.shape[1:])

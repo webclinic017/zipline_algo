@@ -7,3 +7,4 @@ class AnalysisData:
         self.orders_data = {}
         self.strategy_report = None
         self.benchmark_report = None
+        self.holdings_data = None
