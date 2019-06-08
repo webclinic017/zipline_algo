@@ -44,7 +44,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.menuBar().addMenu(file_menu)
 
         self.main_widget.setFocus()
-        self.setStyleSheet("color: black; background-color: white")
+        # self.setStyleSheet("color: black; background-color: white")
         self.setCentralWidget(self.main_widget)
 
         self.add_tab(overview_tab.get_tab_name())
