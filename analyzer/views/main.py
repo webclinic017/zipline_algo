@@ -24,7 +24,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         overview_tab = OverviewTab(self, self.analysis_data)
         performance_tab = PerformanceTab(self, self.analysis_data)
-        holdings_tab = HoldingsTab(self, self.analysis_data)
+        holdings_tab = HoldingsTab(self)
 
         self.all_tabs_dict[overview_tab.get_tab_name()] = overview_tab
         self.all_tabs_dict[performance_tab.get_tab_name()] = performance_tab

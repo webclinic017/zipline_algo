@@ -115,13 +115,11 @@ class Analyzer:
             holdings.at[0] = ['symbol',
                                'name',
                                'sector',
-                               'avg_price',
-                               'last_price',
-                               'daily_change',
-                               'pct_daily_change',
-                               'total_change',
-                               'pct_total_change',
-                               'pct_port']
+                               4, 5, 6, 7, 8, 9, 10]
+            holdings.at[1] = ['symbol1',
+                              'name1',
+                              'sector1',
+                              41, 51, 61, 71, 81, 91, 101]
 
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict

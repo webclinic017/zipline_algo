@@ -291,7 +291,7 @@ def rebalance(context, data):
             # an equivalent of 5% of the current portfolio value.
             order_target_percent(position.asset, exposure / 2)
             context.turnover_count += 1
-            print("Half profit booking done for {}".format(position.asset.symbol))
+            # print("Half profit booking done for {}".format(position.asset.symbol))
 
     # initialize an empty list of positions, used during the buy logic
     position_list = []
@@ -346,8 +346,8 @@ def rebalance(context, data):
                         # if no, adding that sector as well to our existing list
                         context.sector_stocks[sector].append(stock)
                         # printing buy order details
-                    print("Buy order triggered for: {} on {} for {} shares"
-                          .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
+                    # print("Buy order triggered for: {} on {} for {} shares"
+                    #       .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
                 # updating our local list of positions so that we do not cross the max 25 stock limit
                 position_list.append(stock)
                 # limit the max position to 25 at all stages
@@ -407,7 +407,7 @@ def handle_data(context, data):
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
 
-                print("Stop loss triggered for: " + position.asset.symbol)
+                # print("Stop loss triggered for: " + position.asset.symbol)
                 # add to stop loss list to prevent re-buy
                 stop_loss = pd.Series([stop_loss_prevention_days], index=[position.asset])
                 stop_list = stop_list.append(stop_loss)
@@ -416,7 +416,7 @@ def handle_data(context, data):
 
     # updating the global stop_loss_list with the locally maintained one
     context.stop_loss_list = stop_list
-    print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
+    # print("Handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
 def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
@@ -456,7 +456,7 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
 
 
 def sell_all(positions, context):
-    print("Sell All rule triggered for "+str(len(positions)))
+    # print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
         context.turnover_count += 1

@@ -6,41 +6,45 @@ from PyQt5.QtCore import *
 
 
 class HoldingsTab(AnalysisTab):
+    resized = pyqtSignal()
 
-    def __init__(self, parent, analysis_data):
+    def __init__(self, parent):
         super(QtWidgets.QWidget, self).__init__(parent)
 
-        # self.resized.connect(self.resizeFunction)
+        self.resized.connect(self.resizeFunction)
 
         self.scrollArea = QtWidgets.QScrollArea(self)
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
 
-        self.initUI()
-        self.analysis_data = analysis_data
+        self.initUI(parent)
+        self.analysis_data = None
 
-    def initUI(self):
+    def initUI(self, parent):
+        # scroll
         outer_layout = QtWidgets.QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollAreaWidgetContents.setFixedHeight(765)
 
+        # configure layout
         grid = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
 
-        group_widget = QtWidgets.QWidget()
-        group_layout = QtWidgets.QVBoxLayout()
+        firstgroup_widget = QtWidgets.QWidget()
+        firstgroup_layout = QtWidgets.QVBoxLayout(firstgroup_widget)
 
-        self.holdingsTable = HoldingsTable()
-        self.group_gbox = GroupConfigBoxWidget('Holdings', group_widget)
-        group_vbox = QtWidgets.QVBoxLayout()
+        self.holdingstable = HoldingsTable()
+        self.holdingstable.filter_type = self.holdingstable.filter_type_top
+        self.firstgroup_gbox = GroupConfigBoxWidget('Holdings: ', firstgroup_widget)
+        firstgroup_vbox = QtWidgets.QVBoxLayout()
 
-        group_vbox.addWidget(self.holdingsTable)
-        group_vbox.setSpacing(0)
-        self.group_gbox.setLayout(group_vbox)
+        firstgroup_vbox.addWidget(self.holdingstable)
+        firstgroup_vbox.setSpacing(0)
+        self.firstgroup_gbox.setLayout(firstgroup_vbox)
 
-        group_layout.setContentsMargins(0, 0, 0, 0)
-        group_layout.addWidget(self.group_gbox)
+        firstgroup_layout.setContentsMargins(0, 0, 0, 0)
+        firstgroup_layout.addWidget(self.firstgroup_gbox)
 
-        grid.addWidget(group_widget, 0, 0)
+        grid.addWidget(firstgroup_widget, 1, 0, 1, 2)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         outer_layout.addWidget(self.scrollArea)
@@ -59,47 +63,84 @@ class HoldingsTab(AnalysisTab):
     def update_plot(self, analysis_data):
         if analysis_data is not None:
             self.analysis_data = analysis_data
-            self.holdingsTable.update_data(self.analysis_data.holdings_data)
+
+        if self.analysis_data is not None and self.analysis_data.holdings_data is not None:
+            self.holdingstable.update_data(self.analysis_data.holdings_data)
 
     def generate_report(self):
-        pass
+        report = {'winners': self.generate_table('winners'), 'losers': self.generate_table('losers')}
 
-    # def resizeFunction(self):
-    #     self.scrollAreaWidgetContents.setFixedWidth(self.scrollArea.size().width())
-    #     # resize columns
-    #     for col in range(0,4):
-    # def resizeEvent(self, event):
-    #     self.resized.emit()
-    #     return super(WinnersLosersTab, self).resizeEvent(event)
-    #
-    # def resizeFunction(self):
-    #     self.scrollAreaWidgetContents.setFixedWidth(self.scrollArea.size().width())
-    #     # resize columns
-    #     for col in range(0, 4):
-    #         self.firstdistributionTable.setColumnWidth(col, int(self.scrollArea.size().width() / 7))
-    #         self.seconddistributionTable.setColumnWidth(col, int(self.scrollArea.size().width() / 7))
+        row_data = []
+        for row_id in range(0, 4):
+            col_data = [self.winners_stats_column_headers[row_id],
+                        self.winners_stats_column_values[row_id].text()]
+            row_data.append(col_data)
+        report['stats'] = row_data
+        return report
+
+    def generate_table(self, win_or_lose):
+        if win_or_lose == 'winners':
+            table = self.firstdistributionTable
+            column_headers = table.winners_column_headers
+        else:
+            table = self.seconddistributionTable
+            column_headers = table.losers_column_headers
+
+        row_data = []
+        # Add Headers only if table is not empty
+        if table.item(0, 0) is not None:
+            row_data = [column_headers]
+            for row_id in range(0, 10):
+                # If 'In Date' is null, break
+                if table.item(row_id, 0) is None:
+                    break
+                col_data = [table.item(row_id, x).text()
+                            if table.item(row_id, x) is not None else ''
+                            for x, y in enumerate(column_headers)]
+                row_data.append(col_data)
+
+        return row_data
+
+    def resizeEvent(self, event):
+        self.resized.emit()
+        return super(HoldingsTab, self).resizeEvent(event)
+
+    def resizeFunction(self):
+        self.scrollAreaWidgetContents.setFixedWidth(self.scrollArea.size().width())
+        # resize columns
+        for col in range(0, 9):
+            self.holdingstable.setColumnWidth(col, int(self.scrollArea.size().width() / 11))
 
 
 class HoldingsTable(QtWidgets.QTableWidget):
+    filter_type_top = 'Return (Best)'
+
+    filter_type = filter_type_top
+    row_count = 50
 
     def __init__(self):
         super(QtWidgets.QTableWidget, self).__init__()
-        self.headers = ['Symbol', 'Name', 'Sector', 'Avg Price', 'Last Price',
-                        '$ Daily Change', '% Daily Change', '$ Total Change', '% Total Change', '% Portfolio']
-        self.setSortingEnabled(True)
+        self.column_headers = ['Symbol', 'Name', 'Sector', 'Avg Price', 'Last Price',
+                               '$ Daily Change', '% Daily Change', '$ Total Change', '% Total Change', '% Portfolio']
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        # self.setRowCount(self.row_count)
+        self.setRowCount(self.row_count)
         self.verticalHeader().hide()
 
-        # set horizontal header
-        for col in range(0, len(self.headers)):
-            self.setHorizontalHeaderItem(col, QtWidgets.QTableWidgetItem(self.headers[col]))
-            self.setColumnWidth(col, 70)
+        self.setColumnCount(len(self.column_headers))
 
-    def update_data(self, holdings_data):
-        for i in range(0, len(holdings_data)):
-            data = holdings_data.iloc[i]
+        # set horizontal header
+        for col in range(0, len(self.column_headers)):
+            self.setHorizontalHeaderItem(col, QtWidgets.QTableWidgetItem(self.column_headers[col]))
+            self.setColumnWidth(col, 140)
+
+    def update_data(self, holdings_df):
+            if not holdings_df.empty:
+                self.update_row(holdings_df)
+
+    def update_row(self, row_data_df):
+        for i in range(0, len(row_data_df)):
+            data = row_data_df.iloc[i]
             symbol = QtWidgets.QTableWidgetItem(data.symbol)
             symbol.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 0, symbol)
@@ -108,7 +149,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
             name.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 1, name)
 
-            sector = QtWidgets.QTableWidgetItem(data.name)
+            sector = QtWidgets.QTableWidgetItem(data.sector)
             sector.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 2, sector)
 
@@ -120,38 +161,35 @@ class HoldingsTable(QtWidgets.QTableWidget):
             last_price.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 4, last_price)
 
-            daily_change = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.daily_change))
+            daily_change = QtWidgets.QTableWidgetItem('{:.2f}$'.format(data.daily_change))
             daily_change.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 5, daily_change)
-            if data.daily_change > 0:
-                self.item(i, 5).setForeground(QColor('blue'))
-            elif data.daily_change < 0:
-                self.item(i, 5).setForeground(QColor('red'))
 
             pct_daily_change = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_daily_change))
             pct_daily_change.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 6, pct_daily_change)
             if data.pct_daily_change > 0:
                 self.item(i, 6).setForeground(QColor('blue'))
-            elif data.daily_change < 0:
+            elif data.pct_daily_change < 0:
                 self.item(i, 6).setForeground(QColor('red'))
 
-            total_change = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.total_change))
+            total_change = QtWidgets.QTableWidgetItem('{:.2f}$'.format(data.total_change))
             total_change.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 7, total_change)
-            if data.daily_change > 0:
-                self.item(i, 7).setForeground(QColor('blue'))
-            elif data.daily_change < 0:
-                self.item(i, 7).setForeground(QColor('red'))
 
             pct_total_change = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_total_change))
             pct_total_change.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 8, pct_total_change)
-            if data.daily_change > 0:
+            if data.pct_total_change > 0:
                 self.item(i, 8).setForeground(QColor('blue'))
-            elif data.daily_change < 0:
+            elif data.pct_total_change < 0:
                 self.item(i, 8).setForeground(QColor('red'))
 
             pct_port = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_port))
             pct_port.setTextAlignment(Qt.AlignRight)
             self.setItem(i, 9, pct_port)
+
+
+class NumericItem(QtWidgets.QTableWidgetItem):
+    def __lt__(self, other):
+        return self.data(Qt.UserRole) < other.data(Qt.UserRole)
