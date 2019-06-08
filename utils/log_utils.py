@@ -15,6 +15,10 @@ def prepare_results_folder():
 results_path = prepare_results_folder()
 
 
+def get_results_path():
+    return results_path
+
+
 def setup_logging(name, log_level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(log_level)

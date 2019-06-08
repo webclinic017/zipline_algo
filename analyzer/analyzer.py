@@ -179,32 +179,18 @@ class Analyzer:
 
             plot_data_df.set_index('date', inplace=True)
 
-            # holdings data
-            # holdings = pd.DataFrame(columns=['symbol',
-            #                                  'name',
-            #                                  'sector',
-            #                                  'avg_price',
-            #                                  'last_price',
-            #                                  'daily_change',
-            #                                  'pct_daily_change',
-            #                                  'total_change',
-            #                                  'pct_total_change',
-            #                                  'pct_port'])
-            #
-            # holdings.at[0] = ['symbol',
-            #                   'name',
-            #                   'sector',
-            #                   4, 5, 6, 7, 8, 9, 10]
-            # holdings.at[1] = ['symbol1',
-            #                   'name1',
-            #                   'sector1',
-            #                   41, 51, 61, 71, 81, 91, 101]
+            # transactions data
+            transactions_data = pd.DataFrame(columns=['symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
+
+            transactions_data.at[0] = ['symbol', 'company_name', 'Type', 4, 5]
+            transactions_data.at[1] = ['symbol', 'company_name', 'Type', 41, 51]
 
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
             self.analysis_data.holdings_data = \
                 self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == context.datetime.date()].reset_index()
+            self.analysis_data.transactions_data = transactions_data
 
     def rolling_drawdown(self, returns):
         out = np.empty(returns.shape[1:])

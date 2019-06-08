@@ -5,6 +5,7 @@ from analyzer.views.performance import PerformanceTab
 from analyzer.views.holdings import HoldingsTab
 from analyzer.views.transactions import TransactionsTab
 from analyzer.analysis_data import AnalysisData
+import os
 
 
 class AnalyzerWindow(QtWidgets.QMainWindow):
@@ -41,12 +42,22 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         layout.addWidget(self.tab_widget)
 
-        file_menu = QtWidgets.QMenu('&File', self)
+        export_menu = QtWidgets.QMenu('&Export', self)
+        # generate pdf action
+        self.generate_pdf_action = QtWidgets.QAction('&PDF Export', self)
+        self.generate_pdf_action.triggered.connect(self.generate_pdf)
+        self.generate_pdf_action.setShortcut(QtCore.Qt.CTRL + QtCore.Qt.Key_P)
+        self.generate_pdf_action.setVisible(True)
 
-        self.menuBar().addMenu(file_menu)
+        export_menu.addAction('&Transactions CSV', self.export_orders_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        export_menu.addSeparator()
+        export_menu.addAction(self.generate_pdf_action)
+
+        self.generate_pdf_action
+
+        self.menuBar().addMenu(export_menu)
 
         self.main_widget.setFocus()
-        # self.setStyleSheet("color: black; background-color: white")
         self.setCentralWidget(self.main_widget)
 
         self.add_tab(overview_tab.get_tab_name())
@@ -58,6 +69,17 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         # connect to event
         self.updateSignal.connect(self.update_plot)
+
+    def generate_pdf(self):
+        # pdf_generator = PdfGenerator(tabs=self.all_tabs_dict, analysis_data=self.analysis_data, app=self.strategyApp)
+        # pdf_generator.generate()
+        pass
+
+    def export_orders_data(self):
+        # orders_df = self.analysis_data.orders_data.reset_index()
+        # if not orders_df.empty:
+        #     orders_df.to_csv(os.path.join(results_path, 'data_transactions.csv'), header=True, index=False)
+        pass
 
     @QtCore.pyqtSlot(AnalysisData)
     def update_plot(self, analysis_data):

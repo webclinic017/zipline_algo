@@ -99,15 +99,15 @@ class TransactionsTable(QtWidgets.QTableWidget):
                 symbol.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 0, symbol)
 
-                name = QtWidgets.QTableWidgetItem(data.name)
-                name.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 1, name)
+                company_name = QtWidgets.QTableWidgetItem(data.company_name)
+                company_name.setTextAlignment(Qt.AlignRight)
+                self.setItem(i, 1, company_name)
 
                 tran_type = QtWidgets.QTableWidgetItem(data.transaction_type)
                 tran_type.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 2, tran_type)
 
-                quantity = QtWidgets.QTableWidgetItem(data.quantity)
+                quantity = QtWidgets.QTableWidgetItem(str(data.quantity))
                 quantity.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 3, quantity)
 

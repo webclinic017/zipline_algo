@@ -78,7 +78,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
 
     def __init__(self):
         super(QtWidgets.QTableWidget, self).__init__()
-        self.column_headers = ['Symbol', 'Name', 'Sector', 'Avg Price', 'Last Price',
+        self.column_headers = ['Symbol', 'Name', 'Sector', 'Quantity', 'Avg Price', 'Last Price',
                                '$ Daily Change', '% Daily Change', '$ Total Change', '% Total Change', '% Portfolio']
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -108,38 +108,42 @@ class HoldingsTable(QtWidgets.QTableWidget):
                 sector.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 2, sector)
 
+                quantity = QtWidgets.QTableWidgetItem(str(int(data.quantity)))
+                quantity.setTextAlignment(Qt.AlignRight)
+                self.setItem(i, 3, quantity)
+
                 avg_price = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.avg_price))
                 avg_price.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 3, avg_price)
+                self.setItem(i, 4, avg_price)
 
                 last_price = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.last_price))
                 last_price.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 4, last_price)
+                self.setItem(i, 5, last_price)
 
                 daily_change = QtWidgets.QTableWidgetItem('{:.2f}$'.format(data.daily_change))
                 daily_change.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 5, daily_change)
+                self.setItem(i, 6, daily_change)
 
                 pct_daily_change = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_daily_change))
                 pct_daily_change.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 6, pct_daily_change)
+                self.setItem(i, 7, pct_daily_change)
                 if data.pct_daily_change > 0:
-                    self.item(i, 6).setForeground(QColor('blue'))
+                    self.item(i, 7).setForeground(QColor('blue'))
                 elif data.pct_daily_change < 0:
-                    self.item(i, 6).setForeground(QColor('red'))
+                    self.item(i, 7).setForeground(QColor('red'))
 
                 total_change = QtWidgets.QTableWidgetItem('{:.2f}$'.format(data.total_change))
                 total_change.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 7, total_change)
+                self.setItem(i, 8, total_change)
 
                 pct_total_change = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_total_change))
                 pct_total_change.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 8, pct_total_change)
+                self.setItem(i, 9, pct_total_change)
                 if data.pct_total_change > 0:
-                    self.item(i, 8).setForeground(QColor('blue'))
+                    self.item(i, 9).setForeground(QColor('blue'))
                 elif data.pct_total_change < 0:
-                    self.item(i, 8).setForeground(QColor('red'))
+                    self.item(i, 9).setForeground(QColor('red'))
 
                 pct_port = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_port))
                 pct_port.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 9, pct_port)
+                self.setItem(i, 10, pct_port)
