@@ -36,6 +36,7 @@ class Analyzer:
                                                         'symbol',
                                                         'name',
                                                         'sector',
+                                                        'quantity',
                                                         'avg_price',
                                                         'last_price',
                                                         'daily_change',
@@ -66,12 +67,14 @@ class Analyzer:
         self.daily_data_df.loc[context.datetime.date()] = [context.account.equity_with_loan]
         columns = ['name',
                    'sector',
+                   'quantity',
                    'avg_price',
                    'last_price',
                    'daily_change',
                    'pct_daily_change',
                    'total_change',
-                   'pct_total_change']
+                   'pct_total_change',
+                   'pct_port']
 
         for position in context.portfolio.positions.values():
             if (previous_date, position.asset.symbol) in previous_days_position.index:
@@ -81,7 +84,7 @@ class Analyzer:
             else:
                 daily_change = 0
                 pct_daily_change = 0
-
+            pct_port = position.last_sale_price * position.amount / context.account.equity_with_loan
             total_change = position.last_sale_price - position.cost_basis
             pct_total_change = position.last_sale_price / position.cost_basis - 1
             self.daily_positions_df.loc[(context.datetime.date(),
@@ -90,12 +93,14 @@ class Analyzer:
                                                                    self.sector_data[
                                                                        position.asset.sid],
                                                                    'NA'),
+                                                               position.amount,
                                                                position.cost_basis,
                                                                position.last_sale_price,
                                                                daily_change,
                                                                pct_daily_change,
                                                                total_change,
-                                                               pct_total_change
+                                                               pct_total_change,
+                                                               pct_port
                                                                ]
 
         # self.daily_positions_df.pct_daily_change = \
@@ -199,7 +204,7 @@ class Analyzer:
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
             self.analysis_data.holdings_data = \
-                self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == context.datetime.date()]
+                self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == context.datetime.date()].reset_index()
 
     def rolling_drawdown(self, returns):
         out = np.empty(returns.shape[1:])
