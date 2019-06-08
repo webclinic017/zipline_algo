@@ -56,8 +56,8 @@ class TransactionsTab(AnalysisTab):
         if analysis_data is not None:
             self.analysis_data = analysis_data
 
-        if self.analysis_data is not None and self.analysis_data.holdings_data is not None:
-            self.holdingstable.update_data(self.analysis_data.holdings_data)
+        if self.analysis_data is not None and self.analysis_data.transactions_data is not None:
+            self.transactionstable.update_data(self.analysis_data.transactions_data)
 
     def generate_report(self):
         pass

@@ -54,6 +54,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.add_tab(holdings_tab.get_tab_name())
         self.add_tab(transactions_tab.get_tab_name())
 
+        self.tab_widget.tabs.setCurrentIndex(0)
+
         # connect to event
         self.updateSignal.connect(self.update_plot)
 
@@ -70,8 +72,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
     def add_tab(self, name):
         tab_object = self.all_tabs_dict[name]
         if tab_object is not None:
-            tab_index = self.tab_widget.tabs.addTab(tab_object, name)
-            self.tab_widget.tabs.setCurrentIndex(tab_index)
+            self.tab_widget.tabs.addTab(tab_object, name)
 
 
 class TabWidget(QtWidgets.QWidget):
