@@ -28,15 +28,27 @@ class PerformanceTab(AnalysisTab):
 
         returns_action = contextManu.addAction("Returns")
         drawdown_action = contextManu.addAction("Drawdown")
+        alpha_action = contextManu.addAction('Alpha')
+        beta_action = contextManu.addAction('Beta')
+        sharpe_action = contextManu.addAction('Sharpe')
+        std_dev = contextManu.addAction('Std Dev')
 
         action = contextManu.exec_(self.mapToGlobal(a0.pos()))
 
         if action == returns_action:
             self.plotter.plot_type = 'returns'
-            self.update_plot(self.analysis_data)
         elif action == drawdown_action:
             self.plotter.plot_type = 'drawdown'
-            self.update_plot(self.analysis_data)
+        elif action == alpha_action:
+            self.plotter.plot_type = 'alpha'
+        elif action == beta_action:
+            self.plotter.plot_type = 'beta'
+        elif action == sharpe_action:
+            self.plotter.plot_type = 'sharpe'
+        elif action == std_dev:
+            self.plotter.plot_type = 'std_dev'
+
+        self.update_plot(self.analysis_data)
 
     def get_tab_name(self):
         return 'Performance'
@@ -76,6 +88,14 @@ class Plotter(FigureCanvas):
             self.plot_returns()
         elif self.plot_type == 'drawdown':
             self.plot_drawdown()
+        elif self.plot_type == 'alpha':
+            self.plot_alpha()
+        elif self.plot_type == 'beta':
+            self.plot_beta()
+        elif self.plot_type == 'sharpe':
+            self.plot_sharpe()
+        elif self.plot_type == 'std_dev':
+            self.plot_std_dev()
 
         self.returns_ax.grid(True)
 
@@ -102,3 +122,63 @@ class Plotter(FigureCanvas):
         self.returns_ax.plot(self.plotdata.drawdown)
         self.returns_ax.plot(self.plotdata.benchmark_drawdown)
         self.returns_ax.legend(['Strategy', 'SPY'], loc='upper left')
+
+    def plot_alpha(self):
+        self.returns_ax.set_ylabel('Alpha')
+        self.returns_ax.yaxis.tick_right()
+        series = empyrical.roll_alpha(self.analysis_data.chart_data.returns,
+                                      self.analysis_data.chart_data.benchmark_returns,
+                                      251)
+
+        if series is not None and series.shape[0] > 0:
+            series = series.reindex(self.analysis_data.chart_data.index)
+            self.plotdata = pd.DataFrame(series)
+            self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
+            xdata = np.arange(len(series.index))
+            self.returns_ax.plot(xdata, series)
+
+            self.returns_ax.legend(['Strategy'], loc='upper left')
+
+    def plot_beta(self):
+        self.returns_ax.set_ylabel('Beta')
+        self.returns_ax.yaxis.tick_right()
+        series = empyrical.roll_beta(self.analysis_data.chart_data.returns,
+                                      self.analysis_data.chart_data.benchmark_returns,
+                                      251)
+
+        if series is not None and series.shape[0] > 0:
+            series = series.reindex(self.analysis_data.chart_data.index)
+            self.plotdata = pd.DataFrame(series)
+            self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
+            xdata = np.arange(len(series.index))
+            self.returns_ax.plot(xdata, series)
+
+            self.returns_ax.legend(['Strategy'], loc='upper left')
+
+    def plot_sharpe(self):
+        self.returns_ax.set_ylabel('Sharpe')
+        self.returns_ax.yaxis.tick_right()
+
+        series = empyrical.roll_sharpe_ratio(self.analysis_data.chart_data.returns, 252)
+        series = series.reindex(self.analysis_data.chart_data.index)
+        self.plotdata = pd.DataFrame(series)
+
+        self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
+        xdata = np.arange(len(series.index))
+        self.returns_ax.plot(xdata, series)
+
+        self.returns_ax.legend(['Strategy'], loc='upper left')
+
+    def plot_std_dev(self):
+        self.returns_ax.set_ylabel('Std Dev')
+        self.returns_ax.yaxis.tick_right()
+
+        series = self.analysis_data.chart_data.returns.rolling(252).std()
+        series = 100 * series.reindex(self.analysis_data.chart_data.index)
+        self.plotdata = pd.DataFrame(series)
+
+        self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
+        xdata = np.arange(len(series.index))
+        self.returns_ax.plot(xdata, series)
+
+        self.returns_ax.legend(['Strategy'], loc='upper left')
