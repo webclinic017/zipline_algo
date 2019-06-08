@@ -1,9 +1,9 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets
 import matplotlib.pyplot as plt
 from analyzer.views.overview import OverviewTab
 from analyzer.views.performance import PerformanceTab
 from analyzer.views.holdings import HoldingsTab
+from analyzer.views.transactions import TransactionsTab
 from analyzer.analysis_data import AnalysisData
 
 
@@ -25,10 +25,12 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         overview_tab = OverviewTab(self, self.analysis_data)
         performance_tab = PerformanceTab(self, self.analysis_data)
         holdings_tab = HoldingsTab(self)
+        transactions_tab = TransactionsTab(self)
 
         self.all_tabs_dict[overview_tab.get_tab_name()] = overview_tab
         self.all_tabs_dict[performance_tab.get_tab_name()] = performance_tab
         self.all_tabs_dict[holdings_tab.get_tab_name()] = holdings_tab
+        self.all_tabs_dict[transactions_tab.get_tab_name()] = transactions_tab
 
         self.main_widget = QtWidgets.QWidget(self)
 
@@ -50,6 +52,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.add_tab(overview_tab.get_tab_name())
         self.add_tab(performance_tab.get_tab_name())
         self.add_tab(holdings_tab.get_tab_name())
+        self.add_tab(transactions_tab.get_tab_name())
 
         # connect to event
         self.updateSignal.connect(self.update_plot)
