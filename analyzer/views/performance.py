@@ -115,8 +115,6 @@ class Plotter(FigureCanvas):
         self.returns_ax.set_ylabel('Drawdown')
         self.returns_ax.yaxis.tick_right()
 
-        # xdata = np.arange(len(self.analysis_data.chart_data.index))
-
         self.plotdata = pd.concat([(100 * self.analysis_data.chart_data.drawdown), (100 * self.analysis_data.chart_data.benchmark_drawdown)], axis=1)
 
         self.returns_ax.plot(self.plotdata.drawdown)
@@ -134,8 +132,7 @@ class Plotter(FigureCanvas):
             series = series.reindex(self.analysis_data.chart_data.index)
             self.plotdata = pd.DataFrame(series)
             self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
-            xdata = np.arange(len(series.index))
-            self.returns_ax.plot(xdata, series)
+            self.returns_ax.plot(series)
 
             self.returns_ax.legend(['Strategy'], loc='upper left')
 
@@ -150,8 +147,7 @@ class Plotter(FigureCanvas):
             series = series.reindex(self.analysis_data.chart_data.index)
             self.plotdata = pd.DataFrame(series)
             self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
-            xdata = np.arange(len(series.index))
-            self.returns_ax.plot(xdata, series)
+            self.returns_ax.plot(series)
 
             self.returns_ax.legend(['Strategy'], loc='upper left')
 
@@ -164,8 +160,7 @@ class Plotter(FigureCanvas):
         self.plotdata = pd.DataFrame(series)
 
         self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
-        xdata = np.arange(len(series.index))
-        self.returns_ax.plot(xdata, series)
+        self.returns_ax.plot(series)
 
         self.returns_ax.legend(['Strategy'], loc='upper left')
 
@@ -178,7 +173,6 @@ class Plotter(FigureCanvas):
         self.plotdata = pd.DataFrame(series)
 
         self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
-        xdata = np.arange(len(series.index))
-        self.returns_ax.plot(xdata, series)
+        self.returns_ax.plot(series)
 
         self.returns_ax.legend(['Strategy'], loc='upper left')
