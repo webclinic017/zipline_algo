@@ -182,6 +182,10 @@ class Analyzer:
             # transactions data
             transactions_data = pd.DataFrame(columns=['symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
 
+            for order_id, order in context.blotter.orders.items():
+                type = 'Buy' if order.amount > 0 else 'Sell'
+                transactions_data.at[order_id] = [order.asset.symbol, order.asset.asset_name, type, order.amount, ]
+
             transactions_data.at[0] = ['symbol', 'company_name', 'Type', 4, 5]
             transactions_data.at[1] = ['symbol', 'company_name', 'Type', 41, 51]
 

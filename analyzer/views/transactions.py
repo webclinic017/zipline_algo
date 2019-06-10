@@ -78,7 +78,7 @@ class TransactionsTable(QtWidgets.QTableWidget):
 
     def __init__(self):
         super(QtWidgets.QTableWidget, self).__init__()
-        self.column_headers = ['Symbol', 'Name', 'Transaction Type', 'Quantity', 'Avg Price']
+        self.column_headers = ['Date', 'Symbol', 'Name', 'Transaction Type', 'Quantity', 'Avg Price']
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setRowCount(self.row_count)
@@ -97,20 +97,20 @@ class TransactionsTable(QtWidgets.QTableWidget):
                 data = row_data_df.iloc[i]
                 symbol = QtWidgets.QTableWidgetItem(data.symbol)
                 symbol.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 0, symbol)
+                self.setItem(i, 1, symbol)
 
                 company_name = QtWidgets.QTableWidgetItem(data.company_name)
                 company_name.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 1, company_name)
+                self.setItem(i, 2, company_name)
 
                 tran_type = QtWidgets.QTableWidgetItem(data.transaction_type)
                 tran_type.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 2, tran_type)
+                self.setItem(i, 3, tran_type)
 
                 quantity = QtWidgets.QTableWidgetItem(str(data.quantity))
                 quantity.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 3, quantity)
+                self.setItem(i, 4, quantity)
 
                 avg_price = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.avg_price))
                 avg_price.setTextAlignment(Qt.AlignRight)
-                self.setItem(i, 4, avg_price)
+                self.setItem(i, 5, avg_price)
