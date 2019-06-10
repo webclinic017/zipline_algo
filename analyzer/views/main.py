@@ -5,6 +5,7 @@ from analyzer.views.performance import PerformanceTab
 from analyzer.views.holdings import HoldingsTab
 from analyzer.views.transactions import TransactionsTab
 from analyzer.analysis_data import AnalysisData
+from analyzer.exporter import PdfGenerator
 import os
 
 
@@ -49,11 +50,9 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.generate_pdf_action.setShortcut(QtCore.Qt.CTRL + QtCore.Qt.Key_P)
         self.generate_pdf_action.setVisible(True)
 
-        export_menu.addAction('&Transactions CSV', self.export_orders_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        export_menu.addAction('&Transactions CSV', self.export_transactions_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         export_menu.addSeparator()
         export_menu.addAction(self.generate_pdf_action)
-
-        self.generate_pdf_action
 
         self.menuBar().addMenu(export_menu)
 
@@ -71,11 +70,10 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.updateSignal.connect(self.update_plot)
 
     def generate_pdf(self):
-        # pdf_generator = PdfGenerator(tabs=self.all_tabs_dict, analysis_data=self.analysis_data, app=self.strategyApp)
-        # pdf_generator.generate()
-        pass
+        pdf_generator = PdfGenerator(tabs=self.all_tabs_dict, analysis_data=self.analysis_data, app=self.app)
+        pdf_generator.generate()
 
-    def export_orders_data(self):
+    def export_transactions_data(self):
         # orders_df = self.analysis_data.orders_data.reset_index()
         # if not orders_df.empty:
         #     orders_df.to_csv(os.path.join(results_path, 'data_transactions.csv'), header=True, index=False)

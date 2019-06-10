@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+
+    </style>
+</head>
+<body>
+    <h1 class="centered underlined">Strategy Performance Report</h1>
+
+    <h2 class="centered">Overview</h2>
+
+    <h3 class="centered">Returns</h3>
+    <table class="vertical_header_datatable">
+        <tr>
+        {% for row in Overview_returns_table %}
+        {% for cell in row %}
+            <td>{{ cell }}</td>
+        {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>

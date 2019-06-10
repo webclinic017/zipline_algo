@@ -31,6 +31,8 @@ class PdfGenerator(object):
             data = {}
             for key, tab in self.tabs.items():
                 try:
+                    if key in ('Holdings', 'Transactions', 'Performance'):
+                        continue
                     tab.update_plot(self.analysis_data)
                     data[key] = tab.generate_report()
                 except Exception as ex:
@@ -41,18 +43,6 @@ class PdfGenerator(object):
             for key, d in data.items():
                 for tab_key, tab_data in d.items():
                     params[key + '_' + tab_key] = tab_data
-
-            # add drawdown source and threshold
-            params['drawdown_source'] = self.tabs['Drawdown'].plotter.drawdown_source
-            params['drawdown_threshold'] = self.tabs['Drawdown'].plotter.min_drawdown
-
-            # add winners_losers filter type
-            params['winner_filter'] = self.tabs['Winners && Losers'].firstdistributionTable.filter_type
-            params['loser_filter'] = self.tabs['Winners && Losers'].seconddistributionTable.filter_type
-
-            # add period wise sub-heading
-            params['period_wise_sub_heading'] = self.tabs['Period wise'].calendar_plotter.selected_period + ' ' + \
-                                                self.tabs['Period wise'].calendar_plotter.selected_metric
 
             html = self.render_template(
                 params
