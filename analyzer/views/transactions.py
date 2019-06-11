@@ -95,6 +95,10 @@ class TransactionsTable(QtWidgets.QTableWidget):
         if not row_data_df.empty:
             for i in range(0, len(row_data_df)):
                 data = row_data_df.iloc[i]
+                date = QtWidgets.QTableWidgetItem(str(data.date))
+                date.setTextAlignment(Qt.AlignRight)
+                self.setItem(i, 0, date)
+
                 symbol = QtWidgets.QTableWidgetItem(data.symbol)
                 symbol.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 1, symbol)

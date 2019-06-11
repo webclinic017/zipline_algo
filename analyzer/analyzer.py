@@ -46,6 +46,9 @@ class Analyzer:
                                                         'pct_port'])
         self.daily_positions_df.set_index(['date', 'symbol'], inplace=True)
 
+        self.transactions_data = pd.DataFrame(
+            columns=['date', 'symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
+
         self.analysis_data = AnalysisData()
         self.strategy = strategy
 
@@ -103,11 +106,16 @@ class Analyzer:
                                                                pct_port
                                                                ]
 
-        # self.daily_positions_df.pct_daily_change = \
-        #     self.daily_positions_df.groupby(level='symbol')['last_price'].pct_change()
-        #
-        # self.daily_positions_df.daily_change = \
-        #     self.daily_positions_df.groupby(level='symbol')['last_price'].diff() * -1
+        if len(context.metrics_tracker._ledger._processed_transactions) > 0:
+            for date, transactions in context.metrics_tracker._ledger._processed_transactions.items():
+                for transaction in transactions:
+                    amount = transaction.get('amount')
+                    type = 'Buy' if amount > 0 else 'Sell'
+                    order_id = transaction.get('order_id')
+                    symbol = transaction.get('sid').symbol
+                    asset_name = transaction.get('sid').asset_name
+                    price = transaction.get('price')
+                    self.transactions_data.at[order_id] = [date.date(), symbol, asset_name, type, amount, price]
 
         if self.daily_data_df.shape[0] % 21 == 0:
             self.generate_analysis_data(context)
@@ -179,22 +187,12 @@ class Analyzer:
 
             plot_data_df.set_index('date', inplace=True)
 
-            # transactions data
-            transactions_data = pd.DataFrame(columns=['symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
-
-            for order_id, order in context.blotter.orders.items():
-                type = 'Buy' if order.amount > 0 else 'Sell'
-                transactions_data.at[order_id] = [order.asset.symbol, order.asset.asset_name, type, order.amount, ]
-
-            transactions_data.at[0] = ['symbol', 'company_name', 'Type', 4, 5]
-            transactions_data.at[1] = ['symbol', 'company_name', 'Type', 41, 51]
-
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
             self.analysis_data.holdings_data = \
                 self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == context.datetime.date()].reset_index()
-            self.analysis_data.transactions_data = transactions_data
+            self.analysis_data.transactions_data = self.transactions_data
 
     def rolling_drawdown(self, returns):
         out = np.empty(returns.shape[1:])
