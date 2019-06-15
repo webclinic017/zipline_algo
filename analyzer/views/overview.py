@@ -51,37 +51,37 @@ class OverviewTab(AnalysisTab):
         returns_table_data.append(row2_data)
         report['returns_table'] = returns_table_data
 
-        # # Ratios Table
-        # # Assign 1st row as column headers
-        # ratios_header = copy.copy(self.plotter.ratios_labels)
-        # ratios_header.insert(0, '')
-        # ratios_table_data = [ratios_header]
-        # # Add vertical columns
-        # row1_data = ['Strategy']
-        # row2_data = [self.analysis_data.info_data['benchmark_symbol']]
-        # # Add data
-        # for sr, br in zip(self.plotter.strategy_ratios, self.plotter.benchmark_ratios):
-        #     row1_data.append(sr.text())
-        #     row2_data.append(br.text())
-        # ratios_table_data.append(row1_data)
-        # ratios_table_data.append(row2_data)
-        # report['ratios_table'] = ratios_table_data
-        #
-        # # Volatility Table
-        # # Assign 1st row as column headers
-        # volatility_header = copy.copy(self.plotter.volatility_labels)
-        # volatility_header.insert(0, '')
-        # volatility_table_data = [volatility_header]
-        # # Add vertical columns
-        # row1_data = ['Strategy']
-        # row2_data = [self.analysis_data.info_data['benchmark_symbol']]
-        # # Add data
-        # for sv, bv in zip(self.plotter.strategy_volatility, self.plotter.benchmark_volatility):
-        #     row1_data.append(sv.text())
-        #     row2_data.append(bv.text())
-        # volatility_table_data.append(row1_data)
-        # volatility_table_data.append(row2_data)
-        # report['volatility_table'] = volatility_table_data
+        # Ratios Table
+        # Assign 1st row as column headers
+        ratios_header = copy.copy(self.plotter.ratios_labels)
+        ratios_header.insert(0, '')
+        ratios_table_data = [ratios_header]
+        # Add vertical columns
+        row1_data = ['Strategy']
+        row2_data = [self.analysis_data.info_data['benchmark_symbol']]
+        # Add data
+        for sr, br in zip(self.plotter.strategy_ratios, self.plotter.benchmark_ratios):
+            row1_data.append(sr.text())
+            row2_data.append(br.text())
+        ratios_table_data.append(row1_data)
+        ratios_table_data.append(row2_data)
+        report['ratios_table'] = ratios_table_data
+
+        # Volatility Table
+        # Assign 1st row as column headers
+        volatility_header = copy.copy(self.plotter.volatility_labels)
+        volatility_header.insert(0, '')
+        volatility_table_data = [volatility_header]
+        # Add vertical columns
+        row1_data = ['Strategy']
+        row2_data = [self.analysis_data.info_data['benchmark_symbol']]
+        # Add data
+        for sv, bv in zip(self.plotter.strategy_volatility, self.plotter.benchmark_volatility):
+            row1_data.append(sv.text())
+            row2_data.append(bv.text())
+        volatility_table_data.append(row1_data)
+        volatility_table_data.append(row2_data)
+        report['volatility_table'] = volatility_table_data
 
         return report
 

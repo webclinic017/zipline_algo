@@ -31,9 +31,10 @@ class PdfGenerator(object):
             data = {}
             for key, tab in self.tabs.items():
                 try:
-                    if key in ('Holdings', 'Transactions', 'Performance'):
+                    if key in ('Holdings', 'Transactions'):
                         continue
-                    tab.update_plot(self.analysis_data)
+                    if key != 'Performance':
+                        tab.update_plot(self.analysis_data)
                     data[key] = tab.generate_report()
                 except Exception as ex:
                     logger.error('Error: ' + str(ex))

@@ -1,14 +1,15 @@
 from analyzer.views.analysistab import AnalysisTab
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import gridspec
 import empyrical
-import numpy as np
 import pandas as pd
+from utils.log_utils import results_path
+import os
+
 
 class PerformanceTab(AnalysisTab):
-
     def __init__(self, parent, analysis_data):
         super(QtWidgets.QWidget, self).__init__(parent)
         self.plotter = Plotter(self)
@@ -60,10 +61,28 @@ class PerformanceTab(AnalysisTab):
         self.plotter.plot(analysis_data)
 
     def generate_report(self):
-        pass
+        report = {}
+        graph_list = ['returns', 'drawdown', 'alpha', 'beta', 'sharpe', 'std_dev']
+
+        for graph in graph_list:
+            # Load the corresponding graph on UI
+            self.plotter.plot_type = graph
+            self.update_plot(self.analysis_data)
+            # Define image path
+            img_path = os.path.join(results_path, graph+'.png')
+            # Remove image if already exist
+            if os.path.exists(img_path):
+                os.remove(img_path)
+            # create plotter image file
+            self.plotter.print_figure(img_path)
+            # define URL
+            img_url = QtCore.QUrl.fromLocalFile(results_path).toString() + "/" + graph + ".png"
+            report[graph] = img_url
+
+        return report
+
 
 class Plotter(FigureCanvas):
-
     def __init__(self, masterWindow):
         self.fig = Figure(figsize=(10, 7))
         gs = gridspec.GridSpec(1, 1)

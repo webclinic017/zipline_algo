@@ -4,16 +4,50 @@
     <meta charset="UTF-8">
     <title></title>
     <style>
-
+        body {font-family: Helvetica, Sans-Serif;}
+        .centered {text-align: center;}
+        .header {
+            text-align: center;
+            page-break-before: always;
+            padding-top: 25px;
+        }
+        .underlined {text-decoration: underline;}
+        .datatable{
+            font-size: 90%;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .datatable td{
+            margin: 0px;
+            border: 1px solid #000;
+            text-align: right;
+        }
+        .datatable tr:first-child td{
+            font-weight: bold;
+            background-color: #F5F5F5;
+            text-align: center !important;
+        }
+        .datatable td:first-child{
+            font-weight: bold;
+            background-color: #F5F5F5;
+            text-align: center !important;
+        }
+        .move_up_image{
+            margin-top: -20px;
+            text-align: center;
+        }
+        .page_break{
+            padding-top: 40px;
+            page-break-before: always;
+       }
     </style>
 </head>
 <body>
     <h1 class="centered underlined">Strategy Performance Report</h1>
 
     <h2 class="centered">Overview</h2>
-
     <h3 class="centered">Returns</h3>
-    <table class="vertical_header_datatable">
+    <table class="datatable">
         <tr>
         {% for row in Overview_returns_table %}
         {% for cell in row %}
@@ -22,6 +56,59 @@
         </tr>
         {% endfor %}
     </table>
+
+    <h3 class="centered">Ratios</h3>
+    <table class="datatable">
+        <tr>
+        {% for row in Overview_ratios_table %}
+        {% for cell in row %}
+            <td>{{ cell }}</td>
+        {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3 class="centered">Volatility</h3>
+    <table class="datatable">
+        <tr>
+        {% for row in Overview_volatility_table %}
+        {% for cell in row %}
+            <td>{{ cell }}</td>
+        {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2 class="header">Performance</h2>
+    <h3 class="centered">Returns</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_returns }}">
+        </div>
+
+    <h3 class="centered">Drawdown</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_drawdown }}">
+        </div>
+
+    <h3 class="centered page_break">Alpha</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_alpha }}">
+        </div>
+
+    <h3 class="centered">Beta</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_beta }}">
+        </div>
+
+    <h3 class="centered page_break">Sharpe</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_sharpe }}">
+        </div>
+
+    <h3 class="centered">Std Deviation</h3>
+        <div class="move_up_image">
+            <img src="{{ Performance_std_dev }}">
+        </div>
 
 </body>
 </html>
