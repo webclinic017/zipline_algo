@@ -55,7 +55,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.generate_pdf_action.setShortcut(QtCore.Qt.CTRL + QtCore.Qt.Key_P)
         self.generate_pdf_action.setVisible(True)
 
-        export_menu.addAction('&Transactions CSV', self.export_transactions_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        export_menu.addAction('&Transactions Report', self.export_transactions_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        export_menu.addAction('&Comparison Report', self.export_comparisons_data, QtCore.Qt.CTRL + QtCore.Qt.Key_C)
         export_menu.addSeparator()
         export_menu.addAction(self.generate_pdf_action)
 
@@ -82,6 +83,10 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
     def export_transactions_data(self):
         export_file = os.path.join(results_path, 'transactions.csv')
         self.analysis_data.transactions_data.to_csv(export_file, index=False)
+
+    def export_comparisons_data(self):
+        export_file = os.path.join(results_path, 'comparison.csv')
+        self.analysis_data.comparison_data.to_csv(export_file, index=False)
 
     @QtCore.pyqtSlot(AnalysisData)
     def update_plot(self, analysis_data):
