@@ -61,7 +61,7 @@ class PerformanceTab(AnalysisTab):
         self.plotter.plot(analysis_data)
 
     def generate_report(self):
-        report = {}
+        report = []
         graph_list = ['returns', 'drawdown', 'alpha', 'beta', 'sharpe', 'std_dev']
 
         for graph in graph_list:
