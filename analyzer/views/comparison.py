@@ -1,5 +1,5 @@
 from analyzer.views.analysistab import AnalysisTab
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import gridspec
@@ -38,6 +38,7 @@ class ComparisonTab(AnalysisTab):
     def generate_report(self):
         pass
 
+
 class CalendarPlotter(FigureCanvas):
 
     def __init__(self, masterWindow):
@@ -53,6 +54,20 @@ class CalendarPlotter(FigureCanvas):
         self.selected_period = None
         self.selected_metric = None
 
+    def contextMenuEvent(self, a0: QtGui.QContextMenuEvent):
+        contextManu = QtWidgets.QMenu(self)
+
+        period_monthly = contextManu.addAction("Monthly")
+        period_quarterly = contextManu.addAction("Quarterly")
+
+        action = contextManu.exec_(self.mapToGlobal(a0.pos()))
+
+        if action == period_monthly:
+            self.selected_period = 'monthly'
+        elif action == period_quarterly:
+            self.selected_period = 'quarterly'
+
+        self.plot(self.analysis_data)
 
     def plot(self, analysis_data=None):
 
@@ -86,16 +101,21 @@ class CalendarPlotter(FigureCanvas):
             heatmap_returns = heatmap_df.pivot('Quarter', 'Year', 'returns')
             heatmap_returns.sort_index(level=0, ascending=True, inplace=True)
 
-        cbar_fmt = lambda x, pos: '{:.1%}'.format(x)
-        graph = seaborn.heatmap(heatmap_returns, ax=self.heatmap_ax)
+        graph = seaborn.heatmap(heatmap_returns, ax=self.heatmap_ax, fmt='.1%', cbar=True,
+                                cbar_ax=self.colorbar_ax, center=0, robust=True,
+                                )
         graph.xaxis.label.set_visible(False)
         graph.set_yticklabels(graph.get_yticklabels())
 
         self.draw()
 
     def get_data_series(self):
-        sample_period = 'M' if self.selected_period == 'monthly' else 'Q'
+        if self.selected_period == 'monthly':
+            sample_period = 'M'
+        elif self.selected_period == 'quarterly':
+            sample_period = 'Q'
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
+
         if self.selected_metric == 'returns':
             return ((self.analysis_data.chart_data.returns + 1).resample(sample_period).prod() - 1)
