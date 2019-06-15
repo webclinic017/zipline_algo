@@ -1,100 +1,39 @@
 import pandas as pd
-from zipline.utils.run_algo import run_algorithm
+from strategy import Strategy
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
 import datetime
-import matplotlib.pyplot as plt
-from zipline.utils.events import date_rules, time_rules
-import numpy as np
-from zipline.api import (get_datetime, attach_pipeline, order_target_percent, order_target, pipeline_output,
-                         record, schedule_function, get_environment)
-import utils.plot_util as ut
+from zipline.utils.events import date_rules
+from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function)
 from utils.log_utils import setup_logging
 from long_term_high_risk.lthr_config import config
+
 
 # stop loss non addition limit set to 5 days
 stop_loss_prevention_days = 15
 # max exposure per sector set to 15%
 max_sector_exposure = 0.15
-fig, ax = plt.subplots(figsize=(10, 5), nrows=3, ncols=2)
 
 logger = setup_logging("long_term_high_risk")
 
 
 def initialize(context):
-    global fig, ax
     attach_pipeline(make_pipeline(), 'my_pipeline')
     context.stop_loss_list = pd.Series()
 
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
+    context.turnover_count = 0
 
     schedule_function(
         rebalance,
         date_rule=date_rules.month_start()
     )
 
-    # set up dataframe to record equity with loan value history
-    port_history = pd.DataFrame(np.empty(0, dtype=[
-        ('date', 'datetime64[ns]'),
-        ('portfolio_net', 'float'),
-        ('returns', 'float'),
-        ('algodd', 'float'),
-        ('benchmarkdd', 'float'),
-        ('leverage', 'int'),
-        ('num_pos', 'int'),
-    ]))
-    port_history.set_index('date')
-    context.port_history = port_history
-
-    context.monthly_df = pd.DataFrame()
-    context.annual_df = pd.DataFrame()
-    context.turnover_count = 0
-
-    # record variables every day after market close
-    schedule_function(recordvars,
-                      date_rule=date_rules.every_day(),
-                      time_rule=time_rules.market_close())
-
-    # scheduling the monthly function to be called at end of each month
-    schedule_function(
-        monthly_records,
-        date_rule=date_rules.month_end()
-    )
-
-    fig.tight_layout()
-    fig.show()
-    fig.canvas.draw()
-    context.ax = ax
-    context.fig = fig
-
 
 def analyze(context, data):
-    print("Finalize is called")
-    monthly_freq = context.monthly_df.pct_change().fillna(0)
-    logger.info("Monthly Returns and Drawdowns")
-    all_history = context.port_history.reset_index()
-    for index, row in monthly_freq.iterrows():
-        logger.info("{} Return: {}%".format(index.strftime('%b %Y'), str(round(row['portfolio_net']*100, 2))))
-
-        current_month_loc = context.monthly_df.index.get_loc(index)
-        if current_month_loc != 0:
-            max_dd = all_history[(all_history['index'] <= index) &
-                                 (all_history['index'] > context.monthly_df.iloc[current_month_loc - 1].name)]['algodd'].min()
-            logger.info("{} Max dd: {}%".format(index.strftime('%b %Y'), str(round(max_dd))))
-
-    logger.info("Annual Returns and Drawdowns")
-    annual_freq = context.annual_df.pct_change().fillna(0)
-    for index, row in annual_freq.iterrows():
-        logger.info("{} Return: {}%".format(index.strftime('%Y'), str(round(row['portfolio_net'] * 100, 2))))
-
-        current_year_loc = context.annual_df.index.get_loc(index)
-        if current_year_loc != 0:
-            max_dd = all_history[(all_history['index'] <= index) &
-                                 (all_history['index'] > context.annual_df.iloc[current_year_loc - 1].name)][
-                'algodd'].min()
-            logger.info("{} Max dd: {}%".format(index.strftime('%Y'), str(round(max_dd))))
+    pass
 
 
 def make_pipeline():
@@ -132,66 +71,8 @@ def recalc_sector_wise_exposure(context):
         context.sector_wise_exposure[sector] = sector_exposure
 
 
-def recordvars(context, data):
-    date = get_datetime()
-    port_history = context.port_history
-
-    portfolio_net = context.account.equity_with_loan
-    num_pos = len(context.portfolio.positions)
-    leverage = context.account.leverage
-
-    port_history.set_value(date, 'portfolio_net', portfolio_net)
-    port_history.set_value(date, 'leverage', leverage)
-    port_history.set_value(date, 'num_pos', num_pos)
-
-    today_return = port_history['portfolio_net'][-2:].pct_change().fillna(0)[-1]
-    port_history.set_value(date, 'returns', today_return)
-
-    max_net = port_history['portfolio_net'].max()
-    algodd = min(0, 100 * (portfolio_net - max_net) / max_net)
-    port_history.set_value(date, 'algodd', algodd)
-
-    algo_returns_cum = 100 * ((1 + port_history['returns']).cumprod() - 1)
-
-    benchmark_returns = 1 + ut.get_benchmark_returns(context)
-    benchmark_returns_cum = 100 * (benchmark_returns.cumprod() - 1)
-    benchmarkdd = min(0, 100 * ((benchmark_returns_cum[-1]) - max(benchmark_returns_cum)) / (
-            100 + max(benchmark_returns_cum)))
-    port_history.set_value(date, 'benchmarkdd', benchmarkdd)
-
-    if context.monthly_df.empty:
-        context.monthly_df = context.port_history[-1:]
-    if context.annual_df.empty:
-        context.annual_df = context.port_history[-1:]
-
-    record(leverage=leverage, num_pos=num_pos)
-
-    # if we have more than 1 month history update the equity curve plot
-    if get_environment('arena') == 'backtest' and len(port_history) % 10 == 0:
-        ax = context.ax
-        fig = context.fig
-
-        ut.plot_returns(ax[0, 0], algo_returns_cum, benchmark_returns_cum)
-        ut.plot_drawdown(ax[0, 1], port_history['algodd'], port_history['benchmarkdd'])
-        ut.plot_positions(ax[1, 0], port_history['num_pos'])
-        ut.plot_leverage(ax[1, 1], port_history['leverage'])
-        fig.canvas.draw()  # draw
-        plt.pause(0.01)
-
-
 def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
-
-
-def monthly_records(context, data):
-    history = context.port_history[-1:]
-    context.monthly_df = context.monthly_df.append(history)
-    if history.index.strftime('%m')[0] == '12':
-        context.annual_df = context.annual_df.append(history)
-
-        logger.info("{} Turnover count: {}".format(history.index.strftime('%Y')[0], context.turnover_count))
-        # Reset Turnover count
-        context.turnover_count = 0
 
 
 def rebalance(context, data):
@@ -345,10 +226,18 @@ if __name__ == '__main__':
     start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
     end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
-    results = run_algorithm(start_date, end_date, initialize, handle_data=handle_data, analyze=analyze,
-                            before_trading_start=before_trading_start, bundle='quandl',
-                            capital_base=config.get('capital_base'))
-    ut.plot_alpha_beta(ax[2, 1], results)
-    ut.plot_sharpe(ax[2, 0], results)
-    fig.canvas.draw()
+    kwargs = {'start': start_date,
+              'end': end_date,
+              'initialize': initialize,
+              'handle_data': handle_data,
+              'analyze': analyze,
+              'before_trading_start': before_trading_start,
+              'bundle': 'quandl',
+              'capital_base': config.get('capital_base'),
+              'algo_name': 'long_term_low_risk',
+              'benchmark_symbol': config.get('benchmark_symbol')}
+
+    strategy = Strategy(kwargs)
+    strategy.run_algorithm()
+
     input("Press any key to exit")
