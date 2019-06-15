@@ -6,16 +6,19 @@ from matplotlib import gridspec
 import pandas as pd
 import calendar
 import seaborn
+from utils.log_utils import results_path
+import os
 
 
 class ComparisonTab(AnalysisTab):
 
-    def __init__(self, parent):
+    def __init__(self, parent, analysis_data):
         super(QtWidgets.QWidget, self).__init__(parent)
 
         self.calendar_plotter = CalendarPlotter(self)
         self.calendar_plotter.selected_period = 'quarterly'
         self.calendar_plotter.selected_metric = 'returns'
+        self.analysis_data = analysis_data
 
         grid = QtWidgets.QGridLayout()
         firstgroup_widget = QtWidgets.QWidget()
@@ -25,6 +28,21 @@ class ComparisonTab(AnalysisTab):
         firstgroup_layout.setContentsMargins(0, 0, 0, 0)
         grid.addWidget(firstgroup_widget, 0, 0)
         self.setLayout(grid)
+
+    def contextMenuEvent(self, a0: QtGui.QContextMenuEvent):
+        contextManu = QtWidgets.QMenu(self)
+
+        period_monthly = contextManu.addAction("Monthly")
+        period_quarterly = contextManu.addAction("Quarterly")
+
+        action = contextManu.exec_(self.mapToGlobal(a0.pos()))
+
+        if action == period_monthly:
+            self.calendar_plotter.selected_period = 'monthly'
+        elif action == period_quarterly:
+            self.calendar_plotter.selected_period = 'quarterly'
+
+        self.update_plot(self.analysis_data)
 
     def get_tab_name(self):
         return 'Comparison'
@@ -36,11 +54,27 @@ class ComparisonTab(AnalysisTab):
         self.calendar_plotter.plot(analysis_data)
 
     def generate_report(self):
-        pass
+        report = {}
+        graph_list = ['monthly', 'quarterly']
+
+        for graph in graph_list:
+            # Load the corresponding graph on UI
+            self.calendar_plotter.selected_period = graph
+            self.update_plot(self.analysis_data)
+            # Define image path
+            img_path = os.path.join(results_path, graph + '.png')
+            # Remove image if already exist
+            if os.path.exists(img_path):
+                os.remove(img_path)
+            # create plotter image file
+            self.calendar_plotter.print_figure(img_path)
+            # define URL
+            img_url = QtCore.QUrl.fromLocalFile(results_path).toString() + "/" + graph + ".png"
+            report[graph] = img_url
+        return report
 
 
 class CalendarPlotter(FigureCanvas):
-
     def __init__(self, masterWindow):
         self.fig = Figure(figsize=(10, 7))
         gs = gridspec.GridSpec(1, 27)
@@ -50,27 +84,10 @@ class CalendarPlotter(FigureCanvas):
         self.colorbar_ax = self.fig.add_subplot(gs[0, 26])
 
         self.setParent(masterWindow)
-        self.analysis_data = None
         self.selected_period = None
         self.selected_metric = None
 
-    def contextMenuEvent(self, a0: QtGui.QContextMenuEvent):
-        contextManu = QtWidgets.QMenu(self)
-
-        period_monthly = contextManu.addAction("Monthly")
-        period_quarterly = contextManu.addAction("Quarterly")
-
-        action = contextManu.exec_(self.mapToGlobal(a0.pos()))
-
-        if action == period_monthly:
-            self.selected_period = 'monthly'
-        elif action == period_quarterly:
-            self.selected_period = 'quarterly'
-
-        self.plot(self.analysis_data)
-
     def plot(self, analysis_data=None):
-
         if analysis_data is not None:
             self.analysis_data = analysis_data
 
@@ -118,4 +135,4 @@ class CalendarPlotter(FigureCanvas):
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
 
         if self.selected_metric == 'returns':
-            return ((self.analysis_data.chart_data.returns + 1).resample(sample_period).prod() - 1)
+            return (self.analysis_data.chart_data.returns + 1).resample(sample_period).prod() - 1
