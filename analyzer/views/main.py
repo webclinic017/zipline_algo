@@ -4,8 +4,11 @@ from analyzer.views.overview import OverviewTab
 from analyzer.views.performance import PerformanceTab
 from analyzer.views.holdings import HoldingsTab
 from analyzer.views.transactions import TransactionsTab
+from analyzer.views.comparison import ComparisonTab
 from analyzer.analysis_data import AnalysisData
 from analyzer.exporter import PdfGenerator
+import os
+from utils.log_utils import results_path
 import os
 
 
@@ -28,11 +31,13 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         performance_tab = PerformanceTab(self, self.analysis_data)
         holdings_tab = HoldingsTab(self)
         transactions_tab = TransactionsTab(self)
+        comparison_tab = ComparisonTab(self)
 
         self.all_tabs_dict[overview_tab.get_tab_name()] = overview_tab
         self.all_tabs_dict[performance_tab.get_tab_name()] = performance_tab
         self.all_tabs_dict[holdings_tab.get_tab_name()] = holdings_tab
         self.all_tabs_dict[transactions_tab.get_tab_name()] = transactions_tab
+        self.all_tabs_dict[comparison_tab.get_tab_name()] = comparison_tab
 
         self.main_widget = QtWidgets.QWidget(self)
 
@@ -63,6 +68,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.add_tab(performance_tab.get_tab_name())
         self.add_tab(holdings_tab.get_tab_name())
         self.add_tab(transactions_tab.get_tab_name())
+        self.add_tab(comparison_tab.get_tab_name())
 
         self.tab_widget.tabs.setCurrentIndex(0)
 
@@ -74,10 +80,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         pdf_generator.generate()
 
     def export_transactions_data(self):
-        # orders_df = self.analysis_data.orders_data.reset_index()
-        # if not orders_df.empty:
-        #     orders_df.to_csv(os.path.join(results_path, 'data_transactions.csv'), header=True, index=False)
-        pass
+        export_file = os.path.join(results_path, 'transactions.csv')
+        self.analysis_data.transactions_data.to_csv(export_file, index=False)
 
     @QtCore.pyqtSlot(AnalysisData)
     def update_plot(self, analysis_data):
