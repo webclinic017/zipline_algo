@@ -234,7 +234,7 @@ if __name__ == '__main__':
               'before_trading_start': before_trading_start,
               'bundle': 'quandl',
               'capital_base': config.get('capital_base'),
-              'algo_name': 'long_term_low_risk',
+              'algo_name': 'long_term_high_risk',
               'benchmark_symbol': config.get('benchmark_symbol')}
 
     strategy = Strategy(kwargs)
