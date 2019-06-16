@@ -31,6 +31,8 @@ class Analyzer:
                                     11: "Transportation"}
         self.app = QtWidgets.QApplication(sys.argv)
         self.daily_data_df = pd.DataFrame(columns=['date', 'net'])
+        self.daily_cagr = pd.Series()
+        self.daily_benchmark_cagr = pd.Series()
         self.daily_data_df.set_index('date', inplace=True)
         self.daily_positions_df = pd.DataFrame(columns=['date',
                                                         'symbol',
@@ -117,9 +119,9 @@ class Analyzer:
                     price = transaction.get('price')
                     self.transactions_data.at[order_id] = [date.date(), symbol, asset_name, type, amount, price]
 
-        if self.daily_data_df.shape[0] % 21 == 0:
-            self.generate_analysis_data(context)
+        self.generate_analysis_data(context)
 
+        if self.daily_data_df.shape[0] % 21 == 0:
             self.aw.updateSignal.emit(self.analysis_data)
 
     def generate_analysis_data(self, context):
@@ -176,16 +178,20 @@ class Analyzer:
             benchmark_report_dict['cagr'] = empyrical.cagr(benchmark_returns)
             benchmark_report_dict['std'] = benchmark_returns.std() * 100
 
+            self.daily_cagr[daily_returns.index[-1]] = report_dict['cagr']
+            self.daily_benchmark_cagr[benchmark_returns.index[-1]] = benchmark_report_dict['cagr']
+
             plot_data_df = pd.concat([daily_returns, benchmark_returns], axis=1,
                                      keys=['returns', 'benchmark_returns'])
 
             plot_data_df.reset_index(inplace=True)
 
             plot_data_df['drawdown'] = portfolio_dd
-
             plot_data_df['benchmark_drawdown'] = benchmark_dd
 
             plot_data_df.set_index('date', inplace=True)
+            plot_data_df['cagr'] = self.daily_cagr
+            plot_data_df['benchmark_cagr'] = self.daily_benchmark_cagr
 
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict

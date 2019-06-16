@@ -10,6 +10,8 @@ from analyzer.exporter import PdfGenerator
 import os
 from utils.log_utils import results_path
 import os
+import pandas as pd
+import empyrical
 
 
 class AnalyzerWindow(QtWidgets.QMainWindow):
@@ -85,8 +87,35 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data.transactions_data.to_csv(export_file, index=False)
 
     def export_comparisons_data(self):
-        export_file = os.path.join(results_path, 'comparison.csv')
-        self.analysis_data.comparison_data.to_csv(export_file, index=False)
+
+        self.analysis_data.chart_data['alpha'] = empyrical.roll_alpha(self.analysis_data.chart_data.returns,
+                                                                      self.analysis_data.chart_data.benchmark_returns,
+                                                                      252)
+        self.analysis_data.chart_data['beta'] = empyrical.roll_beta(self.analysis_data.chart_data.returns,
+                                                                    self.analysis_data.chart_data.benchmark_returns,
+                                                                    252)
+        self.analysis_data.chart_data['sharpe'] = empyrical.roll_sharpe_ratio(self.analysis_data.chart_data.returns,
+                                                                              252)
+
+        self.analysis_data.chart_data['benchmark_sharpe'] = empyrical.roll_sharpe_ratio(
+            self.analysis_data.chart_data.benchmark_returns, 252)
+
+        self.analysis_data.chart_data['std'] = self.analysis_data.chart_data.returns.rolling(252).std()
+
+        self.analysis_data.chart_data['benchmark_std'] = self.analysis_data.chart_data.benchmark_returns.rolling(
+            252).std()
+
+        self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
+
+        yearly_comparison_data = (self.analysis_data.chart_data + 1).resample('Y').prod() - 1
+
+        monthly_comparison_data = (self.analysis_data.chart_data + 1).resample('M').prod() - 1
+
+        yearly_comparison_data.to_csv(os.path.join(results_path, 'comparison_yearly.csv'))
+
+        monthly_comparison_data.to_csv(os.path.join(results_path, 'comparison_monthly.csv'))
+
+
 
     @QtCore.pyqtSlot(AnalysisData)
     def update_plot(self, analysis_data):
