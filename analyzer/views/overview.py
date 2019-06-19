@@ -238,6 +238,7 @@ class OverviewWidget(QtWidgets.QTableWidget):
             self.strategy_returns[3].setText('{:.2f}%'.format(100 * strategy_data['ytd']))
 
             self.benchmark_returns[0].setText('{:.2f}%'.format(100 * benchmark_data['total_return_pct']))
+            self.benchmark_returns[1].setText('{:.2f}'.format(100 * benchmark_data['total_return']))
             self.benchmark_returns[2].setText('{:.2f}%'.format(100 * benchmark_data['cagr']))
             self.benchmark_returns[3].setText('{:.2f}%'.format(100 * benchmark_data['ytd']))
 

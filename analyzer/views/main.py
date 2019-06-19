@@ -47,7 +47,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         layout.setSpacing(10)
 
         self.tab_widget = TabWidget(self)
-
+        self.tab_widget.tabs.currentChanged.connect(self.tab_changed)
         layout.addWidget(self.tab_widget)
 
         export_menu = QtWidgets.QMenu('&Export', self)
@@ -77,6 +77,13 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         # connect to event
         self.updateSignal.connect(self.update_plot)
+
+    def tab_changed(self):
+        if self.analysis_data is not None:
+            try:
+                self.updateSignal.emit(self.analysis_data)
+            except Exception as e:
+                print(e)
 
     def generate_pdf(self):
         pdf_generator = PdfGenerator(tabs=self.all_tabs_dict, analysis_data=self.analysis_data, app=self.app)
@@ -113,9 +120,13 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         monthly_comparison_data = (self.analysis_data.chart_data + 1).resample('M').prod() - 1
 
+        weekly_comparison_data = (self.analysis_data.chart_data + 1).resample('W').prod() - 1
+
         yearly_comparison_data.to_csv(os.path.join(results_path, 'comparison_yearly.csv'))
 
         monthly_comparison_data.to_csv(os.path.join(results_path, 'comparison_monthly.csv'))
+
+        weekly_comparison_data.to_csv(os.path.join(results_path, 'comparison_weekly.csv'))
 
 
 

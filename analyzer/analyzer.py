@@ -30,7 +30,7 @@ class Analyzer:
                                     10: "Technology",
                                     11: "Transportation"}
         self.app = QtWidgets.QApplication(sys.argv)
-        self.daily_data_df = pd.DataFrame(columns=['date', 'net'])
+        self.daily_data_df = pd.DataFrame(columns=['date', 'net', 'benchmark_net'])
         self.daily_cagr = pd.Series()
         self.daily_benchmark_cagr = pd.Series()
         self.daily_data_df.set_index('date', inplace=True)
@@ -66,10 +66,21 @@ class Analyzer:
         pass
 
     def handle_data(self, context):
+        print("Processing - {}".format(context.datetime.date().strftime("%Y%m%d")))
         previous_date = context.datetime.date() if self.daily_data_df.empty else self.daily_data_df.index[-1]
         previous_days_position = \
             self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == previous_date]
-        self.daily_data_df.loc[context.datetime.date()] = [context.account.equity_with_loan]
+
+        if self.daily_data_df.empty:
+            self.daily_data_df.loc[context.datetime.date()] = [context.account.equity_with_loan,
+                                                               context.account.equity_with_loan]
+        else:
+            benchmark_return = context.trading_environment.benchmark_returns.loc[context.datetime.date()]
+            benchmark_net = self.daily_data_df.iloc[-1].benchmark_net + \
+                            (self.daily_data_df.iloc[-1].benchmark_net * benchmark_return)
+            self.daily_data_df.loc[context.datetime.date()] = [context.account.equity_with_loan,
+                                                               benchmark_net]
+
         columns = ['name',
                    'sector',
                    'quantity',
@@ -169,7 +180,8 @@ class Analyzer:
             report_dict['std'] = daily_returns.std() * 100
 
             benchmark_report_dict['total_return_pct'] = (benchmark_returns + 1).prod() - 1
-            benchmark_report_dict['total_return'] = 0
+            benchmark_report_dict['total_return'] = self.daily_data_df.iloc[-1].benchmark_net \
+                                                    - self.daily_data_df.iloc[0].benchmark_net
             benchmark_report_dict['ytd'] = (ytd_benchmark_returns + 1).prod() - 1
             benchmark_report_dict['one_year'] = (one_year_benchmark_returns + 1).prod() - 1
             benchmark_report_dict['max_drawdown'] = benchmark_dd.min()
