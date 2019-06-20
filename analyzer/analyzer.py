@@ -204,6 +204,7 @@ class Analyzer:
             plot_data_df.set_index('date', inplace=True)
             plot_data_df['cagr'] = self.daily_cagr
             plot_data_df['benchmark_cagr'] = self.daily_benchmark_cagr
+            plot_data_df['positions_count'] = self.daily_positions_df.groupby('date').size()
 
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict

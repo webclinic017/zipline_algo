@@ -33,6 +33,7 @@ class PerformanceTab(AnalysisTab):
         beta_action = contextManu.addAction('Beta')
         sharpe_action = contextManu.addAction('Sharpe')
         std_dev = contextManu.addAction('Std Dev')
+        positions = contextManu.addAction('Positions')
 
         action = contextManu.exec_(self.mapToGlobal(a0.pos()))
 
@@ -48,6 +49,8 @@ class PerformanceTab(AnalysisTab):
             self.plotter.plot_type = 'sharpe'
         elif action == std_dev:
             self.plotter.plot_type = 'std_dev'
+        elif action == positions:
+            self.plotter.plot_type = 'positions'
 
         self.update_plot(self.analysis_data)
 
@@ -62,7 +65,7 @@ class PerformanceTab(AnalysisTab):
 
     def generate_report(self):
         report = {}
-        graph_list = ['returns', 'drawdown', 'alpha', 'beta', 'sharpe', 'std_dev']
+        graph_list = ['returns', 'drawdown', 'alpha', 'beta', 'sharpe', 'std_dev', 'positions']
 
         for graph in graph_list:
             # Load the corresponding graph on UI
@@ -115,6 +118,8 @@ class Plotter(FigureCanvas):
             self.plot_sharpe()
         elif self.plot_type == 'std_dev':
             self.plot_std_dev()
+        elif self.plot_type == 'positions':
+            self.plot_positions()
 
         self.returns_ax.grid(True)
 
@@ -145,7 +150,7 @@ class Plotter(FigureCanvas):
         self.returns_ax.yaxis.tick_right()
         series = empyrical.roll_alpha(self.analysis_data.chart_data.returns,
                                       self.analysis_data.chart_data.benchmark_returns,
-                                      251)
+                                      252)
 
         if series is not None and series.shape[0] > 0:
             series = series.reindex(self.analysis_data.chart_data.index)
@@ -160,7 +165,7 @@ class Plotter(FigureCanvas):
         self.returns_ax.yaxis.tick_right()
         series = empyrical.roll_beta(self.analysis_data.chart_data.returns,
                                       self.analysis_data.chart_data.benchmark_returns,
-                                      251)
+                                     252)
 
         if series is not None and series.shape[0] > 0:
             series = series.reindex(self.analysis_data.chart_data.index)
@@ -192,6 +197,18 @@ class Plotter(FigureCanvas):
         self.plotdata = pd.DataFrame(series)
 
         self.returns_ax.set_ylim(min(0, series.min()), max(0, series.max()))
+        self.returns_ax.plot(series)
+
+        self.returns_ax.legend(['Strategy'], loc='upper left')
+
+    def plot_positions(self):
+        self.returns_ax.set_ylabel('Positions')
+        self.returns_ax.yaxis.tick_right()
+
+        series = self.analysis_data.chart_data.positions_count
+        self.plotdata = pd.DataFrame(series)
+
+        self.returns_ax.set_ylim(min(0, series.min()-1), max(0, series.max()+1))
         self.returns_ax.plot(series)
 
         self.returns_ax.legend(['Strategy'], loc='upper left')
