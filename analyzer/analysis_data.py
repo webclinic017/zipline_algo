@@ -9,3 +9,4 @@ class AnalysisData:
         self.benchmark_report = None
         self.holdings_data = None
         self.transactions_data = None
+        self.holdings_data_historical = None

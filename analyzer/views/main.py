@@ -57,6 +57,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.generate_pdf_action.setShortcut(QtCore.Qt.CTRL + QtCore.Qt.Key_P)
         self.generate_pdf_action.setVisible(True)
 
+        export_menu.addAction('&Holdings Report', self.export_holdings_data, QtCore.Qt.CTRL + QtCore.Qt.Key_H)
         export_menu.addAction('&Transactions Report', self.export_transactions_data, QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         export_menu.addAction('&Comparison Report', self.export_comparisons_data, QtCore.Qt.CTRL + QtCore.Qt.Key_C)
         export_menu.addSeparator()
@@ -92,6 +93,10 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
     def export_transactions_data(self):
         export_file = os.path.join(results_path, 'transactions.csv')
         self.analysis_data.transactions_data.to_csv(export_file, index=False)
+
+    def export_holdings_data(self):
+        export_file = os.path.join(results_path, 'holdings.csv')
+        self.analysis_data.holdings_data_historical.to_csv(export_file, index=False)
 
     def export_comparisons_data(self):
 
