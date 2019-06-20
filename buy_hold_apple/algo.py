@@ -12,7 +12,10 @@ def handle_data(context, data):
     stock1 = symbol('GOOG')
     order_target(stock, 100)
     order_target(stock1, 100)
-
+    if context.datetime.date().strftime("%Y%m%d") == "20150114":
+        order_target(stock, 0)
+    if context.datetime.date().strftime("%Y%m%d") == "20150120":
+        order_target(stock1, 0)
 
 def analyze(context, data):
     pass

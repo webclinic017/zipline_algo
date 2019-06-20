@@ -11,7 +11,7 @@ from pandas.tseries.offsets import BDay
 
 from analyzer.analysis_data import AnalysisData
 from analyzer.views.main import AnalyzerWindow
-
+import zipline
 
 class Analyzer:
     def __init__(self, strategy):
@@ -34,9 +34,12 @@ class Analyzer:
         self.daily_cagr = pd.Series()
         self.daily_benchmark_cagr = pd.Series()
         self.daily_data_df.set_index('date', inplace=True)
-        self.daily_positions_df = pd.DataFrame(columns=['date',
+        self.daily_positions_df = pd.DataFrame(columns=['position_date',
+                                                        'date',
                                                         'symbol',
                                                         'name',
+                                                        'entry',
+                                                        'exit',
                                                         'sector',
                                                         'quantity',
                                                         'avg_price',
@@ -81,7 +84,10 @@ class Analyzer:
             self.daily_data_df.loc[context.datetime.date()] = [context.account.equity_with_loan,
                                                                benchmark_net]
 
-        columns = ['name',
+        columns = ['position_date',
+                   'name',
+                   'entry',
+                   'exit',
                    'sector',
                    'quantity',
                    'avg_price',
@@ -97,15 +103,20 @@ class Analyzer:
                 previous_last_price = self.daily_positions_df.loc[previous_date, position.asset.symbol].last_price
                 daily_change = position.last_sale_price - previous_last_price
                 pct_daily_change = position.last_sale_price / previous_last_price - 1
+                entry = self.daily_positions_df.loc[previous_date, position.asset.symbol].entry
             else:
                 daily_change = 0
                 pct_daily_change = 0
+                entry = context.datetime.date()
             pct_port = position.last_sale_price * position.amount / context.account.equity_with_loan
             total_change = position.last_sale_price - position.cost_basis
             pct_total_change = position.last_sale_price / position.cost_basis - 1
             self.daily_positions_df.loc[(context.datetime.date(),
-                                    position.asset.symbol), columns] = [position.asset.asset_name,
-                                                               self.sector_code_mapping.get(
+                                    position.asset.symbol), columns] = [context.datetime.date(),
+                                                                        position.asset.asset_name,
+                                                                        entry,
+                                                                        '',
+                                                                        self.sector_code_mapping.get(
                                                                    self.sector_data[
                                                                        position.asset.sid],
                                                                    'NA'),
@@ -129,6 +140,9 @@ class Analyzer:
                     asset_name = transaction.get('sid').asset_name
                     price = transaction.get('price')
                     self.transactions_data.at[order_id] = [date.date(), symbol, asset_name, type, amount, price]
+                    # check if symbol does not exists in position
+                    if zipline.api.symbol(symbol) not in context.portfolio.positions.keys():
+                        self.daily_positions_df.loc[(previous_date, symbol), 'exit'] = context.datetime.date()
 
         self.generate_analysis_data(context)
 
@@ -209,8 +223,7 @@ class Analyzer:
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
-            self.analysis_data.holdings_data = \
-                self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == context.datetime.date()].reset_index()
+            self.analysis_data.holdings_data = self.daily_positions_df.reset_index()
             self.analysis_data.transactions_data = self.transactions_data
             self.analysis_data.holdings_data_historical = self.daily_positions_df.reset_index()
 
