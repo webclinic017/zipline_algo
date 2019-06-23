@@ -102,7 +102,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         self.analysis_data.chart_data['alpha'] = empyrical.roll_alpha(self.analysis_data.chart_data.returns,
                                                                       self.analysis_data.chart_data.benchmark_returns,
-                                                                      252)
+                                                                      252) * 100
         self.analysis_data.chart_data['beta'] = empyrical.roll_beta(self.analysis_data.chart_data.returns,
                                                                     self.analysis_data.chart_data.benchmark_returns,
                                                                     252)
@@ -121,11 +121,37 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
 
-        yearly_comparison_data = (self.analysis_data.chart_data + 1).resample('Y').prod() - 1
+        idx = pd.date_range(self.analysis_data.chart_data.index[:1][0], self.analysis_data.chart_data.index[-1:][0])
+        filled_data = self.analysis_data.chart_data.reindex(idx, method='ffill')
+        returns_data = self.analysis_data.chart_data[['returns', 'benchmark_returns']]
+        drawdown_data = self.analysis_data.chart_data[['drawdown', 'benchmark_drawdown']]
 
-        monthly_comparison_data = (self.analysis_data.chart_data + 1).resample('M').prod() - 1
+        yearly_comparison_returns = returns_data.resample('Y').sum()
+        yearly_comparison_drawdown = drawdown_data.resample('Y').min()
+        yearly_comparison_init = pd.concat([yearly_comparison_returns, yearly_comparison_drawdown],
+                                           axis=1, join_axes=[yearly_comparison_returns.index]) * 100
+        yearly_comparison_data = pd.concat([yearly_comparison_init, filled_data[['positions_count', 'alpha', 'beta',
+                                                                                 'sharpe', 'benchmark_sharpe', 'std',
+                                                                                 'benchmark_std']]],
+                                           axis=1, join_axes=[yearly_comparison_init.index])
 
-        weekly_comparison_data = (self.analysis_data.chart_data + 1).resample('W').prod() - 1
+        monthly_comparison_returns = returns_data.resample('M').sum() * 100
+        monthly_comparison_drawdown = drawdown_data.resample('M').min()
+        monthly_comparison_init = pd.concat([monthly_comparison_returns, monthly_comparison_drawdown],
+                                           axis=1, join_axes=[monthly_comparison_returns.index]) * 100
+        monthly_comparison_data = pd.concat([monthly_comparison_init, filled_data[['positions_count', 'alpha', 'beta',
+                                                                                 'sharpe', 'benchmark_sharpe', 'std',
+                                                                                 'benchmark_std']]],
+                                           axis=1, join_axes=[monthly_comparison_init.index])
+
+        weekly_comparison_returns = returns_data.resample('W').sum() * 100
+        weekly_comparison_drawdown = drawdown_data.resample('W').min()
+        weekly_comparison_init = pd.concat([weekly_comparison_returns, weekly_comparison_drawdown],
+                                           axis=1, join_axes=[weekly_comparison_returns.index]) * 100
+        weekly_comparison_data = pd.concat([weekly_comparison_init, filled_data[['positions_count', 'alpha', 'beta',
+                                                                                 'sharpe', 'benchmark_sharpe', 'std',
+                                                                                 'benchmark_std']]],
+                                           axis=1, join_axes=[weekly_comparison_init.index])
 
         yearly_comparison_data.to_csv(os.path.join(results_path, 'comparison_yearly.csv'))
 
