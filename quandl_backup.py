@@ -83,7 +83,7 @@ def load_data_table(file,
                         'ticker',
                         # 'action',
                         'exchange',
-                        # 'name',
+                        'name',
                         'isdelisted',
                         # 'contraticker',
                         # 'contraname',
@@ -325,13 +325,16 @@ def quandl_bundle(environ,
         raw_data[['symbol', 'date']],
         show_progress
     )
-    asset_metadata = pd.merge(asset_metadata, raw_data[['symbol', 'exchange']].drop_duplicates(), how='left', on=['symbol'])
+    asset_metadata = pd.merge(asset_metadata, raw_data[['symbol', 'exchange', 'name']].drop_duplicates(), how='left', on=['symbol'])
     asset_metadata.loc[asset_metadata.exchange.isna(), ['exchange']] = 'NA'
+    asset_metadata.loc[asset_metadata.name.isna(), ['name']] = 'NA'
+    asset_metadata = asset_metadata.rename(columns={'name': 'asset_name'})
     asset_db_writer.write(asset_metadata)
 
     # now drop echange and is delisted columns
     del raw_data['exchange']
     del raw_data['isdelisted']
+    del raw_data['name']
 
     symbol_map = asset_metadata.symbol
     sessions = calendar.sessions_in_range(start_session, end_session)
