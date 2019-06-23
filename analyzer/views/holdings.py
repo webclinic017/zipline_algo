@@ -94,6 +94,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
 
     def update_data(self, row_data_df):
         if not row_data_df.empty:
+            self.setRowCount(row_data_df.shape[0])
             for i in range(0, len(row_data_df)):
                 data = row_data_df.iloc[i]
 
@@ -160,3 +161,5 @@ class HoldingsTable(QtWidgets.QTableWidget):
                 pct_port = QtWidgets.QTableWidgetItem('{:.2f}%'.format(data.pct_port))
                 pct_port.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 13, pct_port)
+        else:
+            self.setRowCount(0)

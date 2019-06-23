@@ -93,6 +93,7 @@ class TransactionsTable(QtWidgets.QTableWidget):
 
     def update_data(self, row_data_df):
         if not row_data_df.empty:
+            self.setRowCount(row_data_df.shape[0])
             for i in range(0, len(row_data_df)):
                 data = row_data_df.iloc[i]
                 date = QtWidgets.QTableWidgetItem(str(data.date))
@@ -118,3 +119,5 @@ class TransactionsTable(QtWidgets.QTableWidget):
                 avg_price = QtWidgets.QTableWidgetItem('{:.2f}'.format(data.avg_price))
                 avg_price.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 5, avg_price)
+        else:
+            self.setRowCount(0)

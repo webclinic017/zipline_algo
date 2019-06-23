@@ -224,8 +224,14 @@ class Analyzer:
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
-            self.analysis_data.holdings_data = self.daily_positions_df.reset_index()
-            self.analysis_data.transactions_data = self.transactions_data
+            if len(self.daily_positions_df.index.get_level_values('date')) < 30:
+                self.analysis_data.holdings_data = self.daily_positions_df.reset_index()
+            else:
+                self.analysis_data.holdings_data = self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') >= self.daily_positions_df.index.get_level_values('date')[-30]].reset_index()
+            if len(self.daily_data_df.index) < 30:
+                self.analysis_data.transactions_data = self.transactions_data
+            else:
+                self.analysis_data.transactions_data = self.transactions_data[self.transactions_data.date >= self.daily_data_df.index[-30]]
             self.analysis_data.holdings_data_historical = self.daily_positions_df.reset_index()
 
     def rolling_drawdown(self, returns):
