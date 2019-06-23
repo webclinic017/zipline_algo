@@ -8,6 +8,7 @@ import calendar
 import seaborn
 from utils.log_utils import results_path
 import os
+from matplotlib.ticker import FuncFormatter
 
 
 class ComparisonTab(AnalysisTab):
@@ -118,8 +119,10 @@ class CalendarPlotter(FigureCanvas):
             heatmap_returns = heatmap_df.pivot('Quarter', 'Year', 'returns')
             heatmap_returns.sort_index(level=0, ascending=True, inplace=True)
 
-        graph = seaborn.heatmap(heatmap_returns, ax=self.heatmap_ax, fmt='.1%', cbar=True,
+        cbar_fmt = lambda x, pos: '{:.1%}'.format(x)
+        graph = seaborn.heatmap(heatmap_returns, annot=True, ax=self.heatmap_ax, fmt='.1%', cbar=True,
                                 cbar_ax=self.colorbar_ax, center=0, robust=True,
+                                cbar_kws={'format': FuncFormatter(cbar_fmt)}
                                 )
         graph.xaxis.label.set_visible(False)
         graph.set_yticklabels(graph.get_yticklabels())
