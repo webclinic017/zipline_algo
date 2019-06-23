@@ -257,7 +257,7 @@ class OverviewWidget(QtWidgets.QTableWidget):
             if np.isnan(strategy_data['sharpe_ratio']):
                 strategy_data['sharpe_ratio'] = 0
 
-            self.strategy_ratios[0].setText('{:.2f}'.format(strategy_data['alpha']))
+            self.strategy_ratios[0].setText('{:.2f}%'.format(strategy_data['alpha']*100))
             self.strategy_ratios[1].setText('{:.2f}'.format(strategy_data['beta']))
             self.strategy_ratios[2].setText('{:.2f}'.format(strategy_data['sharpe_ratio']))
             # self.strategy_ratios[3].setText('{:.2f}'.format(strategy_data['win_ratio']))
