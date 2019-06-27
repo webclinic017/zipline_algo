@@ -117,7 +117,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data.chart_data['benchmark_std'] = self.analysis_data.chart_data.benchmark_returns.rolling(
             252).std()
 
-        self.analysis_data.chart_data.to_csv(os.path.join(results_path, 'raw_chart_data.csv'))
+        self.analysis_data.chart_data.to_csv(os.path.join(results_path, 'daily_chart_data.csv'))
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
 
@@ -126,7 +126,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         returns_data = self.analysis_data.chart_data[['returns', 'benchmark_returns']]
         drawdown_data = self.analysis_data.chart_data[['drawdown', 'benchmark_drawdown']]
 
-        yearly_comparison_returns = returns_data.resample('Y').sum()
+        yearly_comparison_returns = (returns_data + 1).resample('Y').prod() - 1
         yearly_comparison_drawdown = drawdown_data.resample('Y').min()
         yearly_comparison_init = pd.concat([yearly_comparison_returns, yearly_comparison_drawdown],
                                            axis=1, join_axes=[yearly_comparison_returns.index]) * 100
@@ -135,7 +135,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
                                                                                  'benchmark_std']]],
                                            axis=1, join_axes=[yearly_comparison_init.index])
 
-        monthly_comparison_returns = returns_data.resample('M').sum() * 100
+        monthly_comparison_returns = (returns_data + 1).resample('M').prod() - 1
         monthly_comparison_drawdown = drawdown_data.resample('M').min()
         monthly_comparison_init = pd.concat([monthly_comparison_returns, monthly_comparison_drawdown],
                                            axis=1, join_axes=[monthly_comparison_returns.index]) * 100
@@ -144,7 +144,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
                                                                                  'benchmark_std']]],
                                            axis=1, join_axes=[monthly_comparison_init.index])
 
-        weekly_comparison_returns = returns_data.resample('W').sum() * 100
+        weekly_comparison_returns = (returns_data + 1).resample('W').prod() - 1
         weekly_comparison_drawdown = drawdown_data.resample('W').min()
         weekly_comparison_init = pd.concat([weekly_comparison_returns, weekly_comparison_drawdown],
                                            axis=1, join_axes=[weekly_comparison_returns.index]) * 100

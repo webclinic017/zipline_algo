@@ -106,7 +106,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
                 symbol.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 1, symbol)
 
-                name = QtWidgets.QTableWidgetItem(data.name)
+                name = QtWidgets.QTableWidgetItem(data['name'])
                 name.setTextAlignment(Qt.AlignRight)
                 self.setItem(i, 2, name)
 

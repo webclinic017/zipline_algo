@@ -190,7 +190,9 @@ class Analyzer:
 
             report_dict['sharpe_ratio'] = empyrical.sharpe_ratio(daily_returns)
             report_dict['alpha'], report_dict['beta'] = empyrical.alpha_beta_aligned(daily_returns, benchmark_returns)
-            report_dict['cagr'] = empyrical.cagr(daily_returns)
+            cagr = empyrical.cagr(daily_returns)
+            print(cagr)
+            report_dict['cagr'] = cagr
             report_dict['std'] = daily_returns.std() * 100
 
             benchmark_report_dict['total_return_pct'] = (benchmark_returns + 1).prod() - 1
