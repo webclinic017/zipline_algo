@@ -150,7 +150,7 @@ class Plotter(FigureCanvas):
         self.returns_ax.yaxis.tick_right()
         series = empyrical.roll_alpha(self.analysis_data.chart_data.returns,
                                       self.analysis_data.chart_data.benchmark_returns,
-                                      252)
+                                      252) * 100
 
         if series is not None and series.shape[0] > 0:
             series = series.reindex(self.analysis_data.chart_data.index)

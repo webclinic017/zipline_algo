@@ -13,6 +13,7 @@ from analyzer.analysis_data import AnalysisData
 from analyzer.views.main import AnalyzerWindow
 import zipline
 
+
 class Analyzer:
     def __init__(self, strategy):
         self.sector_file = 'NASDAQ_sids.npy'
@@ -52,7 +53,8 @@ class Analyzer:
         self.daily_positions_df.set_index(['date', 'symbol'], inplace=True)
 
         self.transactions_data = pd.DataFrame(
-            columns=['date', 'symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
+            columns=['counter', 'date', 'symbol', 'company_name', 'transaction_type', 'quantity', 'avg_price'])
+        self.transaction_count = 0
 
         self.analysis_data = AnalysisData()
         self.strategy = strategy
@@ -133,13 +135,14 @@ class Analyzer:
         if len(context.metrics_tracker._ledger._processed_transactions) > 0:
             for date, transactions in context.metrics_tracker._ledger._processed_transactions.items():
                 for transaction in transactions:
+                    self.transaction_count += 1
                     amount = transaction.get('amount')
                     type = 'Buy' if amount > 0 else 'Sell'
                     order_id = transaction.get('order_id')
                     symbol = transaction.get('sid').symbol
                     asset_name = transaction.get('sid').asset_name
                     price = transaction.get('price')
-                    self.transactions_data.at[order_id] = [date.date(), symbol, asset_name, type, amount, price]
+                    self.transactions_data.at[order_id] = [self.transaction_count, date.date(), symbol, asset_name, type, amount, price]
                     # check if symbol does not exists in position
                     if zipline.api.symbol(symbol) not in context.portfolio.positions.keys():
                         self.daily_positions_df.loc[(previous_date, symbol), 'exit'] = context.datetime.date()
@@ -226,7 +229,7 @@ class Analyzer:
             self.analysis_data.chart_data = plot_data_df
             self.analysis_data.strategy_report = report_dict
             self.analysis_data.benchmark_report = benchmark_report_dict
-            if len(self.daily_positions_df.index.get_level_values('date')) < 30:
+            if len(self.daily_positions_df.index.get_level_values('date').value_counts()) < 30:
                 self.analysis_data.holdings_data = self.daily_positions_df.reset_index()
             else:
                 self.analysis_data.holdings_data = self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') >= self.daily_positions_df.index.get_level_values('date')[-30]].reset_index()
