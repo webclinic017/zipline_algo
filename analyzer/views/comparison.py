@@ -35,6 +35,7 @@ class ComparisonTab(AnalysisTab):
 
         period_monthly = contextManu.addAction("Monthly")
         period_quarterly = contextManu.addAction("Quarterly")
+        period_yearly = contextManu.addAction("Yearly")
 
         action = contextManu.exec_(self.mapToGlobal(a0.pos()))
 
@@ -42,6 +43,8 @@ class ComparisonTab(AnalysisTab):
             self.calendar_plotter.selected_period = 'monthly'
         elif action == period_quarterly:
             self.calendar_plotter.selected_period = 'quarterly'
+        elif action == period_yearly:
+            self.calendar_plotter.selected_period = 'yearly'
 
         self.update_plot(self.analysis_data)
 
@@ -56,7 +59,7 @@ class ComparisonTab(AnalysisTab):
 
     def generate_report(self):
         report = {}
-        graph_list = ['monthly', 'quarterly']
+        graph_list = ['monthly', 'quarterly', 'yearly']
 
         for graph in graph_list:
             # Load the corresponding graph on UI
@@ -118,6 +121,15 @@ class CalendarPlotter(FigureCanvas):
 
             heatmap_returns = heatmap_df.pivot('Quarter', 'Year', 'returns')
             heatmap_returns.sort_index(level=0, ascending=True, inplace=True)
+        elif self.selected_period == 'yearly':
+            self.heatmap_ax.yaxis.label.set_visible(True)
+
+            heatmap_df = pd.DataFrame({'returns': data_series.values}, index=data_series.index)
+            heatmap_df['Year'] = 1
+            heatmap_df['Year_x'] = heatmap_df.index.year
+
+            heatmap_returns = heatmap_df.pivot('Year', 'Year_x', 'returns')
+            heatmap_returns.sort_index(level=0, ascending=True, inplace=True)
 
         cbar_fmt = lambda x, pos: '{:.1%}'.format(x)
         graph = seaborn.heatmap(heatmap_returns, annot=True, annot_kws={"size": 7}, ax=self.heatmap_ax, fmt='.1%',
@@ -134,6 +146,8 @@ class CalendarPlotter(FigureCanvas):
             sample_period = 'M'
         elif self.selected_period == 'quarterly':
             sample_period = 'Q'
+        elif self.selected_period == 'yearly':
+            sample_period = 'Y'
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
 
