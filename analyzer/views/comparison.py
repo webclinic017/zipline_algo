@@ -132,7 +132,7 @@ class CalendarPlotter(FigureCanvas):
             heatmap_returns.sort_index(level=0, ascending=True, inplace=True)
 
         cbar_fmt = lambda x, pos: '{:.1%}'.format(x)
-        graph = seaborn.heatmap(heatmap_returns, annot=True, annot_kws={"size": 7}, ax=self.heatmap_ax, fmt='.1%',
+        graph = seaborn.heatmap(heatmap_returns, annot=True, annot_kws={"size": 11}, ax=self.heatmap_ax, fmt='.1%',
                                 cbar=True, cbar_ax=self.colorbar_ax, cmap='RdYlGn', center=0, robust=True,
                                 cbar_kws={'format': FuncFormatter(cbar_fmt)}
                                 )
