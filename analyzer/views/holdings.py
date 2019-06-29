@@ -79,7 +79,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
     def __init__(self):
         super(QtWidgets.QTableWidget, self).__init__()
         self.column_headers = ['Date', 'Symbol', 'Name', 'Entry', 'Exit', 'Sector', 'Quantity', 'Avg Price', 'Last Price',
-                               '$ Daily Change', '% Daily Change', '$ Total Change', '% Total Change', '% Portfolio']
+                               '$ Daily Change', '% Daily Change', '$ Total Change', '% Total Change', 'Weight']
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setRowCount(self.row_count)

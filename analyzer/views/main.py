@@ -117,7 +117,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data.chart_data['benchmark_std'] = self.analysis_data.chart_data.benchmark_returns.rolling(
             252).std()
 
-        self.analysis_data.chart_data.to_csv(os.path.join(results_path, 'daily_chart_data.csv'))
+        self.analysis_data.chart_data.to_csv(os.path.join(results_path, 'comparison_daily.csv'))
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
 

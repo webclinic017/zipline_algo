@@ -89,7 +89,7 @@ class TransactionsTable(QtWidgets.QTableWidget):
         # set horizontal header
         for col in range(0, len(self.column_headers)):
             self.setHorizontalHeaderItem(col, QtWidgets.QTableWidgetItem(self.column_headers[col]))
-            self.setColumnWidth(col, 180)
+            self.setColumnWidth(col, 140)
 
     def update_data(self, row_data_df):
         if not row_data_df.empty:
