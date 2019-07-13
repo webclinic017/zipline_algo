@@ -7,7 +7,6 @@ from analyzer.views.transactions import TransactionsTab
 from analyzer.views.comparison import ComparisonTab
 from analyzer.analysis_data import AnalysisData
 from analyzer.exporter import PdfGenerator
-import os
 from utils.log_utils import results_path
 import os
 import pandas as pd
@@ -46,6 +45,31 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.setSpacing(10)
 
+        self.dateWindow = QtWidgets.QWidget()
+        self.start_date = DateWidget(self)
+        self.end_date = DateWidget(self)
+
+        self.hbox = QtWidgets.QHBoxLayout()
+        start_label = QtWidgets.QLabel("<font color='#666666'><strong>Start Date:</font></strong>", self)
+        start_label.setFixedWidth(80)
+        self.hbox.addWidget(start_label)
+        self.hbox.addWidget(self.start_date)
+        self.hbox.insertSpacing(2, 60)
+        end_label = QtWidgets.QLabel("<font color='#666666'><strong>End Date:</font></strong>", self)
+        end_label.setFixedWidth(70)
+        self.hbox.addWidget(end_label)
+        self.hbox.addWidget(self.end_date)
+
+        self.hbox.insertSpacing(5, 100)
+        self.date_range_go_button = QtWidgets.QPushButton("Go")
+        self.date_range_go_button.setFixedWidth(60)
+        self.date_range_go_button.setEnabled(False)
+        self.date_range_go_button.clicked.connect(self.btnstate)
+        self.hbox.addWidget(self.date_range_go_button)
+
+        self.dateWindow.setLayout(self.hbox)
+        layout.addWidget(self.dateWindow)
+
         self.tab_widget = TabWidget(self)
         self.tab_widget.tabs.currentChanged.connect(self.tab_changed)
         layout.addWidget(self.tab_widget)
@@ -78,6 +102,15 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         # connect to event
         self.updateSignal.connect(self.update_plot)
+
+    def enable_date_range_selection(self):
+        self.date_range_go_button.setEnabled(True)
+
+    def btnstate(self):
+        if self.date_range_go_button.isChecked():
+            print("button pressed")
+        else:
+            print("button released")
 
     def tab_changed(self):
         if self.analysis_data is not None:
@@ -163,8 +196,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
         weekly_comparison_data.to_csv(os.path.join(results_path, 'comparison_weekly.csv'))
 
-
-
     @QtCore.pyqtSlot(AnalysisData)
     def update_plot(self, analysis_data):
         if analysis_data is not None:
@@ -179,6 +210,22 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         tab_object = self.all_tabs_dict[name]
         if tab_object is not None:
             self.tab_widget.tabs.addTab(tab_object, name)
+
+
+class DateWidget(QtWidgets.QDateEdit):
+    """docstring for DateWidget"""
+    def __init__(self, parent=None):
+        super(DateWidget, self).__init__()
+        self.parent = parent
+
+        self.setDate(QtCore.QDate.currentDate())
+        self.setCalendarPopup(True)
+        self.setDisplayFormat('dd/MM/yyyy')
+        self.cal = self.calendarWidget()
+        self.cal.setFirstDayOfWeek(QtCore.Qt.Monday)
+        self.cal.setHorizontalHeaderFormat(QtWidgets.QCalendarWidget.SingleLetterDayNames)
+        self.cal.setVerticalHeaderFormat(QtWidgets.QCalendarWidget.NoVerticalHeader)
+        self.cal.setGridVisible(True)
 
 
 class TabWidget(QtWidgets.QWidget):

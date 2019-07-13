@@ -277,7 +277,7 @@ class Analyzer:
         pass
 
     def finalize(self):
-        pass
+        self.aw.enable_date_range_selection()
 
     def show_plot(self):
         self.aw.show()
