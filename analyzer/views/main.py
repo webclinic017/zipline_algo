@@ -21,7 +21,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.app = app
         self.analysis_data = analysis_data
         self.start_date = strategy_data.get('start')
-        self.current_date = strategy_data.get('start')
         self.end_date = strategy_data.get('end')
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -85,7 +84,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.hbox = QtWidgets.QHBoxLayout()
         self.hbox.addWidget(QtWidgets.QLabel("<font><strong>Start Date: " + self.start_date.strftime("%d-%m-%Y") + "</font></strong>", self))
         self.hbox.addWidget(QtWidgets.QLabel("<font><strong>End Date: " + self.end_date.strftime("%d-%m-%Y") + "</font></strong>", self))
-        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>Current Date: " + self.current_date.strftime("%d-%m-%Y") + "</font></strong>",self))
         self.footer.setLayout(self.hbox)
         layout.addWidget(self.footer)
 
@@ -233,7 +231,6 @@ class DateWidget(QtWidgets.QDateEdit):
         super(DateWidget, self).__init__()
         self.parent = parent
 
-        self.setDate(QtCore.QDate.currentDate())
         self.setCalendarPopup(True)
         self.setDisplayFormat('dd/MM/yyyy')
         self.cal = self.calendarWidget()

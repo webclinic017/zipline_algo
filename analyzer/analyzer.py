@@ -72,7 +72,6 @@ class Analyzer:
 
     def handle_data(self, context):
         print("Processing - {}".format(context.datetime.date().strftime("%Y%m%d")))
-        self.aw.current_date = context.datetime.date()
         previous_date = context.datetime.date() if self.daily_data_df.empty else self.daily_data_df.index[-1]
         previous_days_position = \
             self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == previous_date]
