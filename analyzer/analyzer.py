@@ -62,7 +62,7 @@ class Analyzer:
         self.analysis_data.info_data['algo_name'] = self.strategy.strategy_data.get('algo_name')
         self.analysis_data.info_data['initial_cash'] = self.strategy.strategy_data.get('capital_base')
         self.analysis_data.info_data['benchmark_symbol'] = self.strategy.strategy_data.get('benchmark_symbol')
-        self.aw = AnalyzerWindow(self.analysis_data, self.app)
+        self.aw = AnalyzerWindow(self.analysis_data, self.strategy.strategy_data, self.app)
 
     def initialize(self):
         pass
@@ -72,6 +72,7 @@ class Analyzer:
 
     def handle_data(self, context):
         print("Processing - {}".format(context.datetime.date().strftime("%Y%m%d")))
+        self.aw.current_date = context.datetime.date()
         previous_date = context.datetime.date() if self.daily_data_df.empty else self.daily_data_df.index[-1]
         previous_days_position = \
             self.daily_positions_df.loc[self.daily_positions_df.index.get_level_values('date') == previous_date]
@@ -239,7 +240,6 @@ class Analyzer:
                 self.analysis_data.monthly_transactions_data = self.transactions_data[self.transactions_data.date >= self.daily_data_df.index[-30]]
             self.analysis_data.holdings_data_historical = self.daily_positions_df.reset_index()
             self.analysis_data.transactions_data = self.transactions_data
-
 
     def rolling_drawdown(self, returns):
         out = np.empty(returns.shape[1:])

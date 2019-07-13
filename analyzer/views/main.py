@@ -17,9 +17,12 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
     all_tabs_dict = {}
     updateSignal = QtCore.pyqtSignal(AnalysisData)
 
-    def __init__(self, analysis_data, app):
+    def __init__(self, analysis_data, strategy_data, app):
         self.app = app
         self.analysis_data = analysis_data
+        self.start_date = strategy_data.get('start')
+        self.current_date = strategy_data.get('start')
+        self.end_date = strategy_data.get('end')
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(self.analysis_data.info_data['algo_name'])
@@ -46,21 +49,25 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         layout.setSpacing(10)
 
         self.dateWindow = QtWidgets.QWidget()
-        self.start_date = DateWidget(self)
-        self.end_date = DateWidget(self)
+        self.start_date_widget = DateWidget(self)
+        self.start_date_widget.setDate(self.start_date)
+        self.start_date_widget.setDateRange(self.start_date, self.end_date)
+        self.end_date_widget = DateWidget(self)
+        self.end_date_widget.setDate(self.end_date)
+        self.end_date_widget.setDateRange(self.start_date, self.end_date)
 
         self.hbox = QtWidgets.QHBoxLayout()
         start_label = QtWidgets.QLabel("<font color='#666666'><strong>Start Date:</font></strong>", self)
         start_label.setFixedWidth(80)
         self.hbox.addWidget(start_label)
-        self.hbox.addWidget(self.start_date)
+        self.hbox.addWidget(self.start_date_widget)
         self.hbox.insertSpacing(2, 60)
         end_label = QtWidgets.QLabel("<font color='#666666'><strong>End Date:</font></strong>", self)
         end_label.setFixedWidth(70)
         self.hbox.addWidget(end_label)
-        self.hbox.addWidget(self.end_date)
-
+        self.hbox.addWidget(self.end_date_widget)
         self.hbox.insertSpacing(5, 100)
+
         self.date_range_go_button = QtWidgets.QPushButton("Go")
         self.date_range_go_button.setFixedWidth(60)
         self.date_range_go_button.setEnabled(False)
@@ -73,6 +80,14 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.tab_widget = TabWidget(self)
         self.tab_widget.tabs.currentChanged.connect(self.tab_changed)
         layout.addWidget(self.tab_widget)
+
+        self.footer = QtWidgets.QWidget()
+        self.hbox = QtWidgets.QHBoxLayout()
+        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>Start Date: " + self.start_date.strftime("%d-%m-%Y") + "</font></strong>", self))
+        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>End Date: " + self.end_date.strftime("%d-%m-%Y") + "</font></strong>", self))
+        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>Current Date: " + self.current_date.strftime("%d-%m-%Y") + "</font></strong>",self))
+        self.footer.setLayout(self.hbox)
+        layout.addWidget(self.footer)
 
         export_menu = QtWidgets.QMenu('&Export', self)
         # generate pdf action
