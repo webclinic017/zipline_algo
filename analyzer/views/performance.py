@@ -10,19 +10,55 @@ import os
 
 
 class PerformanceTab(AnalysisTab):
-    def __init__(self, parent, analysis_data):
+    def __init__(self, parent, strategy_data, analysis_data):
         super(QtWidgets.QWidget, self).__init__(parent)
         self.plotter = Plotter(self)
         self.analysis_data = analysis_data
 
-        grid = QtWidgets.QGridLayout()
+        self.main_widget = QtWidgets.QWidget(self)
+        layout = QtWidgets.QVBoxLayout(self.main_widget)
+        layout.setSpacing(10)
+
+        self.start_date = strategy_data.get('start')
+        self.end_date = strategy_data.get('end')
+
+        self.dateWindow = QtWidgets.QWidget()
+        self.start_date_widget = DateWidget(self)
+        self.start_date_widget.setDate(self.start_date)
+        self.start_date_widget.setDateRange(self.start_date, self.end_date)
+        self.end_date_widget = DateWidget(self)
+        self.end_date_widget.setDate(self.end_date)
+        self.end_date_widget.setDateRange(self.start_date, self.end_date)
+
+        self.hbox = QtWidgets.QHBoxLayout()
+        start_label = QtWidgets.QLabel("<font color='#666666'><strong>Start Date:</font></strong>", self)
+        start_label.setFixedWidth(80)
+        self.hbox.addWidget(start_label)
+        self.hbox.addWidget(self.start_date_widget)
+        self.hbox.insertSpacing(2, 60)
+        end_label = QtWidgets.QLabel("<font color='#666666'><strong>End Date:</font></strong>", self)
+        end_label.setFixedWidth(70)
+        self.hbox.addWidget(end_label)
+        self.hbox.addWidget(self.end_date_widget)
+        self.hbox.insertSpacing(5, 100)
+
+        self.date_range_go_button = QtWidgets.QPushButton("Go")
+        self.date_range_go_button.setFixedWidth(60)
+        self.date_range_go_button.setEnabled(False)
+        self.date_range_go_button.clicked.connect(self.btnstate)
+        self.hbox.addWidget(self.date_range_go_button)
+
+        self.dateWindow.setLayout(self.hbox)
+        layout.addWidget(self.dateWindow)
+
         firstgroup_widget = QtWidgets.QWidget()
         firstgroup_layout = QtWidgets.QVBoxLayout(firstgroup_widget)
         firstgroup_layout.addWidget(self.plotter)
         firstgroup_layout.setSpacing(0)
         firstgroup_layout.setContentsMargins(0, 0, 0, 0)
-        grid.addWidget(firstgroup_widget, 0, 0)
-        self.setLayout(grid)
+
+        layout.addWidget(firstgroup_widget)
+        self.setLayout(layout)
 
     def contextMenuEvent(self, a0: QtGui.QContextMenuEvent):
         contextManu = QtWidgets.QMenu(self)
@@ -59,6 +95,10 @@ class PerformanceTab(AnalysisTab):
 
     def get_tab_description(self):
         return 'some description'
+
+    def btnstate(self):
+        self.start_date = self.start_date_widget.date()
+        self.end_date = self.end_date_widget.date()
 
     def update_plot(self, analysis_data):
         self.plotter.plot(analysis_data)
@@ -212,3 +252,18 @@ class Plotter(FigureCanvas):
         self.returns_ax.plot(series)
 
         self.returns_ax.legend(['Strategy'], loc='upper left')
+
+
+class DateWidget(QtWidgets.QDateEdit):
+    """docstring for DateWidget"""
+    def __init__(self, parent=None):
+        super(DateWidget, self).__init__()
+        self.parent = parent
+
+        self.setCalendarPopup(True)
+        self.setDisplayFormat('dd/MM/yyyy')
+        self.cal = self.calendarWidget()
+        self.cal.setFirstDayOfWeek(QtCore.Qt.Monday)
+        self.cal.setHorizontalHeaderFormat(QtWidgets.QCalendarWidget.SingleLetterDayNames)
+        self.cal.setVerticalHeaderFormat(QtWidgets.QCalendarWidget.NoVerticalHeader)
+        self.cal.setGridVisible(True)

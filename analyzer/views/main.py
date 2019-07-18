@@ -20,8 +20,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
     def __init__(self, analysis_data, strategy_data, app):
         self.app = app
         self.analysis_data = analysis_data
-        self.start_date = strategy_data.get('start')
-        self.end_date = strategy_data.get('end')
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(self.analysis_data.info_data['algo_name'])
@@ -31,7 +29,7 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.setMinimumWidth(960)
 
         overview_tab = OverviewTab(self, self.analysis_data)
-        performance_tab = PerformanceTab(self, self.analysis_data)
+        performance_tab = PerformanceTab(self, strategy_data, self.analysis_data)
         holdings_tab = HoldingsTab(self)
         transactions_tab = TransactionsTab(self)
         comparison_tab = ComparisonTab(self, self.analysis_data)
@@ -47,45 +45,9 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.setSpacing(10)
 
-        self.dateWindow = QtWidgets.QWidget()
-        self.start_date_widget = DateWidget(self)
-        self.start_date_widget.setDate(self.start_date)
-        self.start_date_widget.setDateRange(self.start_date, self.end_date)
-        self.end_date_widget = DateWidget(self)
-        self.end_date_widget.setDate(self.end_date)
-        self.end_date_widget.setDateRange(self.start_date, self.end_date)
-
-        self.hbox = QtWidgets.QHBoxLayout()
-        start_label = QtWidgets.QLabel("<font color='#666666'><strong>Start Date:</font></strong>", self)
-        start_label.setFixedWidth(80)
-        self.hbox.addWidget(start_label)
-        self.hbox.addWidget(self.start_date_widget)
-        self.hbox.insertSpacing(2, 60)
-        end_label = QtWidgets.QLabel("<font color='#666666'><strong>End Date:</font></strong>", self)
-        end_label.setFixedWidth(70)
-        self.hbox.addWidget(end_label)
-        self.hbox.addWidget(self.end_date_widget)
-        self.hbox.insertSpacing(5, 100)
-
-        self.date_range_go_button = QtWidgets.QPushButton("Go")
-        self.date_range_go_button.setFixedWidth(60)
-        self.date_range_go_button.setEnabled(False)
-        self.date_range_go_button.clicked.connect(self.btnstate)
-        self.hbox.addWidget(self.date_range_go_button)
-
-        self.dateWindow.setLayout(self.hbox)
-        layout.addWidget(self.dateWindow)
-
         self.tab_widget = TabWidget(self)
         self.tab_widget.tabs.currentChanged.connect(self.tab_changed)
         layout.addWidget(self.tab_widget)
-
-        self.footer = QtWidgets.QWidget()
-        self.hbox = QtWidgets.QHBoxLayout()
-        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>Start Date: " + self.start_date.strftime("%d-%m-%Y") + "</font></strong>", self))
-        self.hbox.addWidget(QtWidgets.QLabel("<font><strong>End Date: " + self.end_date.strftime("%d-%m-%Y") + "</font></strong>", self))
-        self.footer.setLayout(self.hbox)
-        layout.addWidget(self.footer)
 
         export_menu = QtWidgets.QMenu('&Export', self)
         # generate pdf action
@@ -118,12 +80,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
     def enable_date_range_selection(self):
         self.date_range_go_button.setEnabled(True)
-
-    def btnstate(self):
-        if self.date_range_go_button.isChecked():
-            print("button pressed")
-        else:
-            print("button released")
 
     def tab_changed(self):
         if self.analysis_data is not None:
@@ -223,21 +179,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         tab_object = self.all_tabs_dict[name]
         if tab_object is not None:
             self.tab_widget.tabs.addTab(tab_object, name)
-
-
-class DateWidget(QtWidgets.QDateEdit):
-    """docstring for DateWidget"""
-    def __init__(self, parent=None):
-        super(DateWidget, self).__init__()
-        self.parent = parent
-
-        self.setCalendarPopup(True)
-        self.setDisplayFormat('dd/MM/yyyy')
-        self.cal = self.calendarWidget()
-        self.cal.setFirstDayOfWeek(QtCore.Qt.Monday)
-        self.cal.setHorizontalHeaderFormat(QtWidgets.QCalendarWidget.SingleLetterDayNames)
-        self.cal.setVerticalHeaderFormat(QtWidgets.QCalendarWidget.NoVerticalHeader)
-        self.cal.setGridVisible(True)
 
 
 class TabWidget(QtWidgets.QWidget):
