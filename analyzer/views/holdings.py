@@ -69,8 +69,8 @@ class HoldingsTab(AnalysisTab):
     def resizeFunction(self):
         self.scrollAreaWidgetContents.setFixedWidth(self.scrollArea.size().width())
         # resize column
-        for col in range(0, 10):
-            self.holdingstable.setColumnWidth(col, int(self.scrollArea.size().width() / 11))
+        # for col in range(0, 10):
+        #     self.holdingstable.setColumnWidth(col, int(self.scrollArea.size().width() / 11))
 
 
 class HoldingsTable(QtWidgets.QTableWidget):
@@ -90,7 +90,10 @@ class HoldingsTable(QtWidgets.QTableWidget):
         # set horizontal header
         for col in range(0, len(self.column_headers)):
             self.setHorizontalHeaderItem(col, QtWidgets.QTableWidgetItem(self.column_headers[col]))
-            self.setColumnWidth(col, 140)
+            if self.column_headers[col] in ('Date', 'Entry', 'Exit'):
+                self.setColumnWidth(col, 130)
+            else:
+                self.setColumnWidth(col, 100)
 
     def update_data(self, row_data_df):
         if not row_data_df.empty:
@@ -100,6 +103,7 @@ class HoldingsTable(QtWidgets.QTableWidget):
 
                 date = QtWidgets.QTableWidgetItem(str(data.position_date))
                 date.setTextAlignment(Qt.AlignRight)
+                date.setFont(QFont('Arial', 9))
                 self.setItem(i, 0, date)
 
                 symbol = QtWidgets.QTableWidgetItem(data.symbol)
@@ -112,10 +116,12 @@ class HoldingsTable(QtWidgets.QTableWidget):
 
                 entry = QtWidgets.QTableWidgetItem(str(data.entry))
                 entry.setTextAlignment(Qt.AlignRight)
+                date.setFont(QFont('Arial', 9))
                 self.setItem(i, 3, entry)
 
                 exit = QtWidgets.QTableWidgetItem(str(data.exit))
                 exit.setTextAlignment(Qt.AlignRight)
+                date.setFont(QFont('Arial', 9))
                 self.setItem(i, 4, exit)
 
                 sector = QtWidgets.QTableWidgetItem(data.sector)

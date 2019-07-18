@@ -69,8 +69,8 @@ class TransactionsTab(AnalysisTab):
     def resizeFunction(self):
         self.scrollAreaWidgetContents.setFixedWidth(self.scrollArea.size().width())
         # resize column
-        for col in range(0, 5):
-            self.transactionstable.setColumnWidth(col, int(self.scrollArea.size().width() / 6))
+        # for col in range(0, 5):
+        #     self.transactionstable.setColumnWidth(col, int(self.scrollArea.size().width() / 6))
 
 
 class TransactionsTable(QtWidgets.QTableWidget):
@@ -89,7 +89,10 @@ class TransactionsTable(QtWidgets.QTableWidget):
         # set horizontal header
         for col in range(0, len(self.column_headers)):
             self.setHorizontalHeaderItem(col, QtWidgets.QTableWidgetItem(self.column_headers[col]))
-            self.setColumnWidth(col, 140)
+            if self.column_headers[col] == 'Date':
+                self.setColumnWidth(col, 130)
+            else:
+                self.setColumnWidth(col, 100)
 
     def update_data(self, row_data_df):
         if not row_data_df.empty:
@@ -103,6 +106,7 @@ class TransactionsTable(QtWidgets.QTableWidget):
 
                 date = QtWidgets.QTableWidgetItem(str(data.date))
                 date.setTextAlignment(Qt.AlignRight)
+                date.setFont(QFont('Arial', 9))
                 self.setItem(i, 1, date)
 
                 symbol = QtWidgets.QTableWidgetItem(data.symbol)
