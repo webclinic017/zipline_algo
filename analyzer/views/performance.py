@@ -44,7 +44,7 @@ class PerformanceTab(AnalysisTab):
 
         self.date_range_go_button = QtWidgets.QPushButton("Go")
         self.date_range_go_button.setFixedWidth(60)
-        self.date_range_go_button.setEnabled(True)
+        self.date_range_go_button.setEnabled(False)
         self.date_range_go_button.clicked.connect(self.btnstate)
         self.hbox.addWidget(self.date_range_go_button)
 
@@ -105,6 +105,8 @@ class PerformanceTab(AnalysisTab):
 
     def update_plot(self, analysis_data):
         self.plotter.plot(analysis_data)
+        if analysis_data.info_data['date_range_go_button']:
+            self.date_range_go_button.setEnabled(True)
 
     def generate_report(self):
         report = {}

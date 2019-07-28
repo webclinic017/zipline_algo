@@ -78,10 +78,6 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         # connect to event
         self.updateSignal.connect(self.update_plot)
 
-    def enable_date_range_selection(self):
-        # self.aw.date_range_go_button.setEnabled(True)
-        pass
-
     def tab_changed(self):
         if self.analysis_data is not None:
             try:

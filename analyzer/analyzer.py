@@ -62,6 +62,7 @@ class Analyzer:
         self.analysis_data.info_data['algo_name'] = self.strategy.strategy_data.get('algo_name')
         self.analysis_data.info_data['initial_cash'] = self.strategy.strategy_data.get('capital_base')
         self.analysis_data.info_data['benchmark_symbol'] = self.strategy.strategy_data.get('benchmark_symbol')
+        self.analysis_data.info_data['date_range_go_button'] = False
         self.aw = AnalyzerWindow(self.analysis_data, self.strategy.strategy_data, self.app)
 
     def initialize(self):
@@ -276,7 +277,8 @@ class Analyzer:
         pass
 
     def finalize(self):
-        self.aw.enable_date_range_selection()
+        self.analysis_data.info_data['date_range_go_button'] = True
+        self.aw.updateSignal.emit(self.analysis_data)
 
     def show_plot(self):
         self.aw.show()
