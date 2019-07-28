@@ -7,6 +7,7 @@ import empyrical
 import pandas as pd
 from utils.log_utils import results_path
 import os
+import copy
 
 
 class PerformanceTab(AnalysisTab):
@@ -19,16 +20,18 @@ class PerformanceTab(AnalysisTab):
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.setSpacing(10)
 
-        self.start_date = strategy_data.get('start')
-        self.end_date = strategy_data.get('end')
+        start_date = strategy_data.get('start')
+        end_date = strategy_data.get('end')
 
         self.dateWindow = QtWidgets.QWidget()
         self.start_date_widget = DateWidget(self)
-        self.start_date_widget.setDate(self.start_date)
-        self.start_date_widget.setDateRange(self.start_date, self.end_date)
+        self.start_date_widget.setDate(start_date)
+        self.start_date_widget.setDateRange(start_date, end_date)
+        self.start_date_widget.setEnabled(False)
         self.end_date_widget = DateWidget(self)
-        self.end_date_widget.setDate(self.end_date)
-        self.end_date_widget.setDateRange(self.start_date, self.end_date)
+        self.end_date_widget.setDate(end_date)
+        self.end_date_widget.setDateRange(start_date, end_date)
+        self.end_date_widget.setEnabled(False)
 
         self.hbox = QtWidgets.QHBoxLayout()
         start_label = QtWidgets.QLabel("<font color='#666666'><strong>Start Date:</font></strong>", self)
@@ -45,7 +48,7 @@ class PerformanceTab(AnalysisTab):
         self.date_range_go_button = QtWidgets.QPushButton("Go")
         self.date_range_go_button.setFixedWidth(60)
         self.date_range_go_button.setEnabled(False)
-        self.date_range_go_button.clicked.connect(self.btnstate)
+        self.date_range_go_button.clicked.connect(self.date_range_change)
         self.hbox.addWidget(self.date_range_go_button)
 
         self.dateWindow.setLayout(self.hbox)
@@ -96,17 +99,23 @@ class PerformanceTab(AnalysisTab):
     def get_tab_description(self):
         return 'some description'
 
-    def btnstate(self):
-        self.start_date = self.start_date_widget.date()
-        self.end_date = self.end_date_widget.date()
+    def date_range_change(self):
+        start_date = self.start_date_widget.date()
+        end_date = self.end_date_widget.date()
+        filtered_data = copy.deepcopy(self.analysis_data)
+        filtered_data.chart_data = filtered_data.chart_data[start_date: end_date]
+        self.plotter.plot(filtered_data)
 
     def enable_date_range_selection(self):
         self.date_range_go_button.setEnabled(True)
 
     def update_plot(self, analysis_data):
+        self.analysis_data = analysis_data
         self.plotter.plot(analysis_data)
         if analysis_data.info_data['date_range_go_button']:
             self.date_range_go_button.setEnabled(True)
+            self.start_date_widget.setEnabled(True)
+            self.end_date_widget.setEnabled(True)
 
     def generate_report(self):
         report = {}
