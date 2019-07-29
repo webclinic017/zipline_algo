@@ -95,6 +95,9 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
 
     def export_holdings_data(self):
         export_file = os.path.join(results_path, 'holdings.csv')
+        self.analysis_data.holdings_data_historical['date'] = self.analysis_data.holdings_data_historical[
+            ~self.analysis_data.holdings_data_historical.duplicated('date')]
+        self.analysis_data.holdings_data_historical.fillna('', inplace=True)
         self.analysis_data.holdings_data_historical.to_csv(export_file, index=False)
 
     def export_comparisons_data(self):
