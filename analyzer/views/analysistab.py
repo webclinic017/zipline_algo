@@ -1,10 +1,11 @@
 from abc import ABC, ABCMeta, abstractmethod
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtWrapperType
+from sip import wrappertype as pyqtWrapperType
+# from PyQt5.QtCore import pyqtWrapperType
 
 
-# class FinalMeta(pyqtWrapperType, metaclass=ABCMeta):
-#     pass
+class FinalMeta(pyqtWrapperType, metaclass=ABCMeta):
+    pass
 
 
 class AnalysisTab(QtWidgets.QWidget):

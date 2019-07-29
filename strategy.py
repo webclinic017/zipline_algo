@@ -12,19 +12,23 @@ class Strategy:
 
     def initialize(self, context):
         self.strategy_data.get('initialize')(context)
-        self.analyzer.initialize()
+        if self.strategy_data.get('live_trading', False) is False:
+            self.analyzer.initialize()
 
     def handle_data(self, context, data):
         self.strategy_data.get('handle_data')(context, data)
-        self.analyzer.handle_data(context)
+        if self.strategy_data.get('live_trading', False) is False:
+            self.analyzer.handle_data(context)
 
     def analyze(self, context, data):
         self.strategy_data.get('analyze')(context, data)
-        self.analyzer.finalize()
+        if self.strategy_data.get('live_trading', False) is False:
+            self.analyzer.finalize()
 
     def before_trading_start(self, context, data):
         self.strategy_data.get('before_trading_start')(context, data)
-        self.analyzer.before_trading_start()
+        if self.strategy_data.get('live_trading', False) is False:
+            self.analyzer.before_trading_start()
 
     def run_algorithm(self):
         if self.strategy_data.get('live_trading', False) is False:
@@ -51,5 +55,6 @@ class Strategy:
         run_algo_thread = threading.Thread(target=run_algorithm, kwargs=kwargs)
         run_algo_thread.start()
 
-        self.analyzer.show_plot()
-        sys.exit(self.analyzer.app.exec_())
+        if self.strategy_data.get('live_trading', False) is False:
+            self.analyzer.show_plot()
+            sys.exit(self.analyzer.app.exec_())
