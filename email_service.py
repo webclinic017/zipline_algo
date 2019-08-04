@@ -13,7 +13,6 @@ import pandas as pd
 
 from apiclient import errors
 
-
 SCOPES = [
     'https://mail.google.com/',
     'https://www.googleapis.com/auth/gmail.modify',
@@ -52,47 +51,48 @@ class EmailService:
         self.members = pd.read_sql("select * from member", self.engine)
 
     def SendMessage(self, subject, message_text):
-      """Send an email message.
+        """Send an email message.
 
-      Args:
-        service: Authorized Gmail API service instance.
-        user_id: User's email address. The special value "me"
-        can be used to indicate the authenticated user.
-        message: Message to be sent.
+        Args:
+          service: Authorized Gmail API service instance.
+          user_id: User's email address. The special value "me"
+          can be used to indicate the authenticated user.
+          message: Message to be sent.
 
-      Returns:
-        Sent Message.
-      """
-      emails = ";".join(list(self.members[self.members['order_notification'] == 1]['email']))
-      message = self.CreateMessage(emails, subject, message_text)
+        Returns:
+          Sent Message.
+        """
+        emails = ";".join(list(self.members[self.members['order_notification'] == 1]['email']))
+        message = self.CreateMessage(emails, subject, message_text)
 
-      try:
-        message = (self.service.users().messages().send(userId="me", body=message)
-                   .execute())
-        print('Message Id: %s' % message['id'])
-        return message
-      except errors.HttpError as error:
-        print('An error occurred: %s' % error)
+        try:
+            message = (self.service.users().messages().send(userId="me", body=message)
+                       .execute())
+            print('Message Id: %s' % message['id'])
+            return message
+        except errors.HttpError as error:
+            print('An error occurred: %s' % error)
 
     def CreateMessage(self, to, subject, message_text):
-      """Create a message for an email.
+        """Create a message for an email.
 
-      Args:
-        sender: Email address of the sender.
-        to: Email address of the receiver.
-        subject: The subject of the email message.
-        message_text: The text of the email message.
+        Args:
+          sender: Email address of the sender.
+          to: Email address of the receiver.
+          subject: The subject of the email message.
+          message_text: The text of the email message.
 
-      Returns:
-        An object containing a base64url encoded email object.
-      """
-      message = MIMEText(message_text)
-      message['to'] = to
-      message['from'] = 'Quantelioalgo@gmail.com'
-      message['subject'] = subject
-      return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
+        Returns:
+          An object containing a base64url encoded email object.
+        """
+        message = MIMEText(message_text)
+        message['to'] = to
+        message['from'] = 'Quantelioalgo@gmail.com'
+        message['subject'] = subject
+        return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
+
 
 if __name__ == '__main__':
     email_service = EmailService()
     email_service.initialize()
-    email_service.SendMessage('order_placed', 'AAPL:SELL:10')
+    # email_service.SendMessage('order_placed', 'GOOG:SELL:10')

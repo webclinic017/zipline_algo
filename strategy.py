@@ -2,6 +2,7 @@ from zipline.utils.run_algo import run_algorithm
 import threading
 import sys
 from analyzer.analyzer import Analyzer
+from email_service import EmailService
 
 
 class Strategy:
@@ -9,11 +10,13 @@ class Strategy:
     def __init__(self, strategy_data):
         self.strategy_data = strategy_data
         self.analyzer = Analyzer(self)
+        self.email_service = EmailService()
 
     def initialize(self, context):
         self.strategy_data.get('initialize')(context)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.initialize()
+            self.email_service.initialize()
 
     def handle_data(self, context, data):
         self.strategy_data.get('handle_data')(context, data)

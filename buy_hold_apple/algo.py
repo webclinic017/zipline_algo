@@ -16,6 +16,7 @@ def initialize(context):
 def handle_data(context, data):
     stock = symbol('AAPL')
     order_target(stock, 200)
+    strategy.email_service.SendMessage('Test', 'Buy Apple test')
 
 
 def analyze(context, data):
@@ -36,12 +37,12 @@ if __name__ == '__main__':
     print(args)
 
     # start date for the backtest in yyyymmdd format string
-    start_date = '20150101'
+    start_date = '20190101'
     # converting date string to date
     start_date = pd.to_datetime(start_date, format='%Y%m%d').tz_localize('UTC')
 
     # end date for the backtest in yyyymmdd format string
-    end_date = '20190331'
+    end_date = '20190731'
     end_date = pd.to_datetime(end_date, format='%Y%m%d').tz_localize('UTC')
 
     kwargs = {'start': start_date,
