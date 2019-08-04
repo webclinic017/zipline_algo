@@ -1,4 +1,4 @@
-title long_term_low_risk_strategy
+title long_term_low_risk_live
 
 set anaconda=c:\ProgramData\Anaconda3
 set env=zipline-live
