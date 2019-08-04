@@ -4,6 +4,11 @@ import sys
 from analyzer.analyzer import Analyzer
 from email_service import EmailService
 
+from sqlalchemy import create_engine
+import datetime
+import os
+from pathlib import Path
+
 
 class Strategy:
 
@@ -28,9 +33,20 @@ class Strategy:
             self.analyzer.handle_data(context)
 
     def analyze(self, context, data):
+        print("Analyse method got called")
         self.strategy_data.get('analyze')(context, data)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.finalize()
+        # if self.strategy_data.get('live_trading', False) is False:
+        db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
+        sql = "INSERT INTO daily_portfolio VALUES ('{}', '{}', '{}');" \
+            .format(context.datetime.date(), self.strategy_data.get('algo_name'), 2456)
+
+        with db_engine.connect() as connection:
+            try:
+                connection.execute(sql)
+            except Exception as e:
+                print(e)
 
     def before_trading_start(self, context, data):
         self.strategy_data.get('before_trading_start')(context, data)

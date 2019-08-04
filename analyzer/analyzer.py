@@ -2,13 +2,11 @@ import datetime
 import os
 import sys
 from pathlib import Path
-
 import empyrical
 import numpy as np
 import pandas as pd
 from PyQt5 import QtWidgets
 from pandas.tseries.offsets import BDay
-
 from analyzer.analysis_data import AnalysisData
 from analyzer.views.main import AnalyzerWindow
 import zipline
@@ -161,7 +159,6 @@ class Analyzer:
             self.aw.updateSignal.emit(self.analysis_data)
 
     def generate_analysis_data(self, context):
-
         if self.daily_data_df.shape[0] > 0:
             # Calculate returns
             daily_returns = self.daily_data_df['net'].pct_change()
