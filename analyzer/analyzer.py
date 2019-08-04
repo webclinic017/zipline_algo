@@ -49,7 +49,9 @@ class Analyzer:
                                                         'pct_daily_change',
                                                         'total_change',
                                                         'pct_total_change',
-                                                        'pct_port'])
+                                                        'pct_port',
+                                                        'book_value',
+                                                        'mkt_value'])
         self.daily_positions_df.set_index(['date', 'symbol'], inplace=True)
 
         self.transactions_data = pd.DataFrame(
@@ -99,7 +101,10 @@ class Analyzer:
                    'pct_daily_change',
                    'total_change',
                    'pct_total_change',
-                   'pct_port']
+                   'pct_port',
+                   'book_value',
+                   'mkt_value'
+                   ]
 
         for position in context.portfolio.positions.values():
             if (previous_date, position.asset.symbol) in previous_days_position.index:
@@ -130,8 +135,10 @@ class Analyzer:
                                                                pct_daily_change,
                                                                total_change,
                                                                pct_total_change,
-                                                               pct_port
-                                                               ]
+                                                               pct_port,
+                                                               position.amount * position.cost_basis,
+                                                               position.amount * position.last_sale_price
+                                                                        ]
 
         if len(context.metrics_tracker._ledger._processed_transactions) > 0:
             for date, transactions in context.metrics_tracker._ledger._processed_transactions.items():
