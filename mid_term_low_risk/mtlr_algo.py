@@ -1,3 +1,8 @@
+import os, sys, inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir)
+
 import pandas as pd
 from strategy import Strategy
 from alphacompiler.data.sf1_fundamentals import Fundamentals
@@ -8,6 +13,8 @@ import numpy as np
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function)
 from utils.log_utils import setup_logging
 from mid_term_low_risk.mtlr_config import config
+import argparse
+
 
 """
     Every time a stock is removed because of breaching the stop loss limit, it is added to a stop_loss_list along with 
@@ -368,6 +375,10 @@ if __name__ == '__main__':
     start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
     end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
+    parser = argparse.ArgumentParser(description='live mode.')
+    parser.add_argument('--live_mode', help='True for live mode')
+    args = parser.parse_args()
+
     # The run_algorithm is a function provided by zipline that initializes and calls all the functions like before_
     # trading_start, handle_data etc etc in the prescribed order, thereby running our backtest from the defined
     # start till the end date, doing all the buy and sells with the starting capital defined as capital_base and using
@@ -382,6 +393,11 @@ if __name__ == '__main__':
               'capital_base': config.get('capital_base'),
               'algo_name': 'mid_term_low_risk',
               'benchmark_symbol': config.get('benchmark_symbol')}
+
+    if args.live_mode == 'True':
+        print("Running in live mode.")
+        kwargs['tws_uri'] = 'localhost:7497:1232'
+        kwargs['live_trading'] = True
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()
