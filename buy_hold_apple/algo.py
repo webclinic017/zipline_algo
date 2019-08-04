@@ -16,7 +16,7 @@ def initialize(context):
 def handle_data(context, data):
     stock = symbol('AAPL')
     order_target(stock, 200)
-    strategy.email_service.SendMessage('Test', 'Buy Apple test')
+    strategy.SendMessage('Test22', 'Buy Apple test')
 
 
 def analyze(context, data):

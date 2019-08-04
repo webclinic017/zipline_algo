@@ -86,7 +86,7 @@ class EmailService:
           An object containing a base64url encoded email object.
         """
         message = MIMEText(message_text)
-        message['to'] = to
+        message['bcc'] = to
         message['from'] = 'Quantelioalgo@gmail.com'
         message['subject'] = subject
         return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}

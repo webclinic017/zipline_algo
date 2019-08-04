@@ -18,6 +18,10 @@ class Strategy:
             self.analyzer.initialize()
             self.email_service.initialize()
 
+    def SendMessage(self, subject, message):
+        if self.strategy_data.get('live_trading', False) is True:
+            self.email_service.SendMessage(subject, message)
+
     def handle_data(self, context, data):
         self.strategy_data.get('handle_data')(context, data)
         if self.strategy_data.get('live_trading', False) is False:
