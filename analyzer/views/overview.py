@@ -260,7 +260,7 @@ class OverviewWidget(QtWidgets.QTableWidget):
             self.strategy_ratios[0].setText('{:.2f}%'.format(strategy_data['alpha']*100))
             self.strategy_ratios[1].setText('{:.2f}'.format(strategy_data['beta']))
             self.strategy_ratios[2].setText('{:.2f}'.format(strategy_data['sharpe_ratio']))
-            self.strategy_ratios[3].setText('{:.2f}'.format(strategy_data['total_return_pct']-benchmark_data['total_return_pct']))
+            self.strategy_ratios[3].setText('{:.2f}%'.format(100 * (strategy_data['total_return_pct']-benchmark_data['total_return_pct'])))
 
             self.benchmark_ratios[0].setText('{:.2f}'.format(benchmark_data['alpha']))
             self.benchmark_ratios[1].setText('{:.2f}'.format(benchmark_data['beta']))
