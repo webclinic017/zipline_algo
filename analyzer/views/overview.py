@@ -146,13 +146,13 @@ class OverviewWidget(QtWidgets.QTableWidget):
         ratio_layout = QtWidgets.QVBoxLayout(ratio_widget)
         ratio_gbox = GroupConfigBoxWidget('Ratios', ratio_widget, False)
         ratio_grid = QtWidgets.QGridLayout()
-        self.ratios_labels = ['Alpha', 'Beta', 'Sharpe', 'Win Ratio']
+        self.ratios_labels = ['Alpha', 'Beta', 'Sharpe', 'Outperformance']
 
         self.strategy_ratios = [QtWidgets.QLabel('0', self), QtWidgets.QLabel('0', self),
                                 QtWidgets.QLabel('0', self), QtWidgets.QLabel('0', self)]
 
         self.benchmark_ratios = [QtWidgets.QLabel('0', self), QtWidgets.QLabel('0', self),
-                                 QtWidgets.QLabel('0', self), QtWidgets.QLabel('0', self)]
+                                 QtWidgets.QLabel('0', self), QtWidgets.QLabel('-', self)]
 
         for col, label, strategy_return, benchmark_return in zip(range(1, len(self.ratios_labels) + 1),
                                                                  self.ratios_labels,
@@ -260,12 +260,11 @@ class OverviewWidget(QtWidgets.QTableWidget):
             self.strategy_ratios[0].setText('{:.2f}%'.format(strategy_data['alpha']*100))
             self.strategy_ratios[1].setText('{:.2f}'.format(strategy_data['beta']))
             self.strategy_ratios[2].setText('{:.2f}'.format(strategy_data['sharpe_ratio']))
-            # self.strategy_ratios[3].setText('{:.2f}'.format(strategy_data['win_ratio']))
+            self.strategy_ratios[3].setText('{:.2f}'.format(strategy_data['total_return']-benchmark_data['total_return']))
 
             self.benchmark_ratios[0].setText('{:.2f}'.format(benchmark_data['alpha']))
             self.benchmark_ratios[1].setText('{:.2f}'.format(benchmark_data['beta']))
             self.benchmark_ratios[2].setText('{:.2f}'.format(benchmark_data['sharpe_ratio']))
-            # self.benchmark_ratios[3].setText('{:.2f}'.format(benchmark_data['win_ratio']))
 
             self.strategy_volatility[0].setText('{:.2f}%'.format(100 * strategy_data['max_drawdown']))
             self.strategy_volatility[1].setText('{:.2f}'.format(strategy_data['std']))
