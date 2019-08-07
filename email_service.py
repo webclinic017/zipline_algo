@@ -87,7 +87,7 @@ class EmailService:
         """
         message = MIMEText(message_text)
         message['bcc'] = to
-        message['from'] = 'Quantelioalgo@gmail.com'
+        message['from'] = 'denis@dariotis.com'
         message['subject'] = subject
         return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
 
