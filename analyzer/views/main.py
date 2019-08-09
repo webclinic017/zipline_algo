@@ -119,6 +119,9 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data.chart_data['benchmark_std'] = self.analysis_data.chart_data.benchmark_returns.rolling(
             252).std()
 
+        self.analysis_data.chart_data['outperformance'] = self.analysis_data.chart_data['returns'] - \
+                                                          self.analysis_data.chart_data['benchmark_returns']
+
         self.analysis_data.chart_data.to_csv(os.path.join(results_path, 'comparison_daily.csv'))
 
         self.analysis_data.chart_data.index = pd.to_datetime(self.analysis_data.chart_data.index)
@@ -129,6 +132,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         drawdown_data = self.analysis_data.chart_data[['drawdown', 'benchmark_drawdown']]
 
         yearly_comparison_returns = (returns_data + 1).resample('Y').prod() - 1
+        yearly_comparison_returns['outperformance'] = yearly_comparison_returns['returns'] - \
+                                                       yearly_comparison_returns['benchmark_returns']
         yearly_comparison_drawdown = drawdown_data.resample('Y').min()
         yearly_comparison_init = pd.concat([yearly_comparison_returns, yearly_comparison_drawdown],
                                            axis=1, join_axes=[yearly_comparison_returns.index]) * 100
@@ -140,6 +145,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         monthly_comparison_returns = (returns_data + 1).resample('M').prod() - 1
         monthly_comparison_returns['annual_returns'] = pow((monthly_comparison_returns['returns']+1), 12) - 1
         monthly_comparison_returns['annual_bm_returns'] = pow((monthly_comparison_returns['benchmark_returns']+1), 12) - 1
+        monthly_comparison_returns['outperformance'] = monthly_comparison_returns['returns'] -\
+                                                       monthly_comparison_returns['benchmark_returns']
         monthly_comparison_drawdown = drawdown_data.resample('M').min()
         monthly_comparison_init = pd.concat([monthly_comparison_returns, monthly_comparison_drawdown],
                                            axis=1, join_axes=[monthly_comparison_returns.index]) * 100
@@ -151,6 +158,8 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         weekly_comparison_returns = (returns_data + 1).resample('W').prod() - 1
         weekly_comparison_returns['annual_returns'] = pow((weekly_comparison_returns['returns']+1), 52) - 1
         weekly_comparison_returns['annual_bm_returns'] = pow((weekly_comparison_returns['benchmark_returns']+1), 52) - 1
+        weekly_comparison_returns['outperformance'] = weekly_comparison_returns['returns'] - \
+                                                       weekly_comparison_returns['benchmark_returns']
         weekly_comparison_drawdown = drawdown_data.resample('W').min()
         weekly_comparison_init = pd.concat([weekly_comparison_returns, weekly_comparison_drawdown],
                                            axis=1, join_axes=[weekly_comparison_returns.index]) * 100

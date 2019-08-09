@@ -55,6 +55,7 @@ class PdfGenerator(object):
             # QtPy webview to print pdf from html
             web = QWebView()
             url = QUrl.fromLocalFile(results_path)
+            web.page().pdfPrintingFinished.connect(web.close)
             web.setHtml(html, baseUrl=url)
             self.app.processEvents()
             printer = QPrinter()
@@ -62,9 +63,15 @@ class PdfGenerator(object):
             printer.setOutputFormat(QPrinter.PdfFormat)
             printer.setOutputFileName(os.path.join(results_path, self.pdf_file_name))
             printer.setColorMode(QPrinter.Color)
-            web.print_(printer)
+            # web.print_(printer)
+
+            def emit_pdf(finished):
+                web.page().printToPdf(os.path.join(results_path, self.pdf_file_name))
+
+            web.loadFinished.connect(emit_pdf)
         except Exception as ex:
             logger.error('Error: ' + str(ex))
+
 
     def render_template(self, params):
         template = self.jinja_env.get_template(params['template_file'])
