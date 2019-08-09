@@ -119,6 +119,7 @@ def rebalance(context, data):
         # selling half to book profit
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
+            strategy.SendMessage('Book Profit Sell Order', 'Book Profit by selling half of '+str(position.asset.symbol))
             context.turnover_count += 1
             print("Half profit booking done for {}".format(position.asset.symbol))
 
@@ -149,6 +150,7 @@ def rebalance(context, data):
 
                 if quantity > 0 and data.can_trade(stock):
                     order_target(stock, quantity)
+                    strategy.SendMessage('Buy Order', 'Buy {} shares of {}'.format(str(quantity), str(stock.symbol)))
                     context.turnover_count += 1
                     cash -= quantity * data.current(stock, 'price')
                     if context.sector_stocks.get(sector, None) is None:
@@ -188,6 +190,7 @@ def handle_data(context, data):
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
+            strategy.SendMessage('Sell Order', 'Buy all shares of {}'.format(str(position.asset.symbol)))
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
@@ -225,6 +228,7 @@ def sell_all(positions, context):
     print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
+        strategy.SendMessage('Sell All and Exit Market', 'Sell all shares of {}'.format(str(position.asset.symbol)))
         context.turnover_count += 1
 
 

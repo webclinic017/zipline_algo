@@ -188,6 +188,7 @@ def rebalance(context, data):
             # that needs to be achieved. so order_target(xyz, 0.05) = will put a buy/sell order for xyx stock to reach
             # an equivalent of 5% of the current portfolio value.
             order_target_percent(position.asset, exposure / 2)
+            strategy.SendMessage('Book Profit Sell Order', 'Book Profit by selling half of '+str(position.asset.symbol))
             context.turnover_count += 1
             print("Half profit booking done for {}".format(position.asset.symbol))
 
@@ -229,6 +230,7 @@ def rebalance(context, data):
 
                 if quantity > 0 and data.can_trade(stock):
                     order_target(stock, quantity)
+                    strategy.SendMessage('Buy Order', 'Buy {} shares of {}'.format(str(quantity), str(stock.symbol)))
                     context.turnover_count += 1
                     # adjust local cash value after placing each order
                     # any orders placed in zipline during a backtest are executed at next day before handle_Data is
@@ -296,6 +298,7 @@ def handle_data(context, data):
             # such that afer the execution of the order there will be 5 shares of xyz in our portfolio. Similarly,
             # order_target(xyz, 0) -> will sell all the quantities of xyz present in the portfolio
             order_target(position.asset, 0)
+            strategy.SendMessage('Sell Order', 'Buy all shares of {}'.format(str(position.asset.symbol)))
             context.turnover_count += 1
 
             # Sometimes, even though the orders are placed, some stocks are not sold on the execution days because of
@@ -357,6 +360,7 @@ def sell_all(positions, context):
     print("Sell All rule triggered for "+str(len(positions)))
     for position in positions:
         order_target_percent(position.asset, 0)
+        strategy.SendMessage('Sell All and Exit Market', 'Sell all shares of {}'.format(str(position.asset.symbol)))
         context.turnover_count += 1
 
 
