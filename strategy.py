@@ -40,7 +40,7 @@ class Strategy:
         # if self.strategy_data.get('live_trading', False) is False:
         db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
         sql = "INSERT INTO daily_portfolio VALUES ('{}', '{}', '{}');" \
-            .format(context.datetime.date(), self.strategy_data.get('algo_name'), 2456)
+            .format(context.datetime.date(), self.strategy_data.get('algo_name'), context.portfolio.portfolio_value)
 
         with db_engine.connect() as connection:
             try:
