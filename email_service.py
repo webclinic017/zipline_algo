@@ -73,6 +73,29 @@ class EmailService:
         except errors.HttpError as error:
             print('An error occurred: %s' % error)
 
+    def SendNotifications(self, subject, message_text):
+        """Send an email message.
+
+        Args:
+          service: Authorized Gmail API service instance.
+          user_id: User's email address. The special value "me"
+          can be used to indicate the authenticated user.
+          message: Message to be sent.
+
+        Returns:
+          Sent Notifications.
+        """
+        emails = ";".join(list(self.members[self.members['daily_notification'] == 1]['email']))
+        message = self.CreateMessage(emails, subject, message_text)
+
+        try:
+            message = (self.service.users().messages().send(userId="me", body=message)
+                       .execute())
+            print('Message Id: %s' % message['id'])
+            return message
+        except errors.HttpError as error:
+            print('An error occurred: %s' % error)
+
     def CreateMessage(self, to, subject, message_text):
         """Create a message for an email.
 
