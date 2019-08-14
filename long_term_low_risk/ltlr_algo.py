@@ -31,10 +31,6 @@ def initialize(context):
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
     context.turnover_count = 0
-    schedule_function(
-        rebalance,
-        date_rule=date_rules.month_start()
-    )
 
 
 def analyze(context, data):
@@ -77,6 +73,10 @@ def recalc_sector_wise_exposure(context):
 
 def before_trading_start(context, data):
     context.pipeline_data = pipeline_output('my_pipeline')
+    schedule_function(
+        rebalance,
+        date_rule=date_rules.month_start()
+    )
 
 
 def rebalance(context, data):
@@ -275,6 +275,8 @@ if __name__ == '__main__':
               'benchmark_symbol': config.get('benchmark_symbol')}
 
     if args.live_mode == 'True':
+        if os.path.exists('test.state'):
+            os.remove('test.state')
         print("Running in live mode.")
         kwargs['tws_uri'] = 'localhost:7497:1232'
         kwargs['live_trading'] = True
