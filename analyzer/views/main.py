@@ -114,10 +114,10 @@ class AnalyzerWindow(QtWidgets.QMainWindow):
         self.analysis_data.chart_data['benchmark_sharpe'] = empyrical.roll_sharpe_ratio(
             self.analysis_data.chart_data.benchmark_returns, 252)
 
-        self.analysis_data.chart_data['std'] = self.analysis_data.chart_data.returns.rolling(252).std()
+        self.analysis_data.chart_data['std'] = self.analysis_data.chart_data.returns.rolling(252).std() * 100
 
         self.analysis_data.chart_data['benchmark_std'] = self.analysis_data.chart_data.benchmark_returns.rolling(
-            252).std()
+            252).std() * 100
 
         self.analysis_data.chart_data['outperformance'] = self.analysis_data.chart_data['returns'] - \
                                                           self.analysis_data.chart_data['benchmark_returns']
