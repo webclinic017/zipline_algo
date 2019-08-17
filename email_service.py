@@ -86,7 +86,9 @@ class EmailService:
           Sent Notifications.
         """
         emails = ";".join(list(self.members[self.members['daily_notification'] == 1]['email']))
-        message = self.CreateMessage(emails, subject, message_text)
+
+        content = '<!DOCTYPE html><html><head><body><p>'+message_text+'</p></body></html>'
+        message = self.CreateMessage(emails, subject, content, 'html')
 
         try:
             message = (self.service.users().messages().send(userId="me", body=message)
@@ -96,7 +98,7 @@ class EmailService:
         except errors.HttpError as error:
             print('An error occurred: %s' % error)
 
-    def CreateMessage(self, to, subject, message_text):
+    def CreateMessage(self, to, subject, message_text, msg_type='plain'):
         """Create a message for an email.
 
         Args:
@@ -104,11 +106,12 @@ class EmailService:
           to: Email address of the receiver.
           subject: The subject of the email message.
           message_text: The text of the email message.
+          msg_type: Type of message. Choose between plain for text/html
 
         Returns:
           An object containing a base64url encoded email object.
         """
-        message = MIMEText(message_text)
+        message = MIMEText(message_text, msg_type)
         message['bcc'] = to
         message['from'] = 'denis@dariotis.com'
         message['subject'] = subject

@@ -20,8 +20,8 @@ class Strategy:
         self.strategy_data.get('initialize')(context)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.initialize()
-        elif self.strategy_data.get('live_trading', False) is True:
-            self.email_service.initialize()
+        # else:
+        self.email_service.initialize()
 
     def SendMessage(self, subject, message):
         if self.strategy_data.get('live_trading', False) is True:
@@ -37,23 +37,67 @@ class Strategy:
         self.strategy_data.get('analyze')(context, data)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.finalize()
-        if self.strategy_data.get('live_trading', False) is True:
+        if self.strategy_data.get('live_trading', False) is False:
+            algo_id = self.strategy_data.get('algo_id')
             db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
-            fetch_port_sql = "Select portfolio_net from daily_portfolio where algo_name='{}' order by date desc limit 1"\
-                .format(self.strategy_data.get('algo_name'))
-            prev_portfolio_net = pd.read_sql(fetch_port_sql, db_engine)
-            prev_portfolio_net = prev_portfolio_net['portfolio_net'][0]
+            prev_date_sql = "select date from prev_run_date where algo_id={}".format(algo_id)
+            prev_run_date = pd.read_sql(prev_date_sql, db_engine)['date'][0]
+            run_date = str(context.datetime.date())
 
-            net_profit = ((context.portfolio.portfolio_value - prev_portfolio_net)/prev_portfolio_net) * 100
-            subject = '{} : Daily Summary'.format(self.strategy_data.get('algo_name'))
-            self.email_service.SendNotifications(subject, 'Daily portfolio change is: {} %'.format(net_profit))
+            prev_pos_sql = "select holding_name, quantity, buy_price, last_price from daily_holdings " \
+                           "where algo_id={} and date='{}'".format(algo_id, prev_run_date)
+            prev_pos = pd.read_sql(prev_pos_sql, db_engine)
+            if prev_pos.empty:
+                prev_pos_list = []
+            else:
+                prev_pos_list = list(prev_pos['holding_name'])
+            prev_pos.set_index('holding_name', inplace=True)
+            curr_positions = context.portfolio.positions.values()
+            stock_email_columns = ['Holding', 'Shares', 'Buy Price', 'Yest Price', 'Current Price',
+                                   'Dollar Gain Today', 'Pct Gain Today', 'Dollar Gain Net', 'Pct Gain Net',
+                                   'Market Value']
+            stock_email = pd.DataFrame(columns=stock_email_columns)
+            for position in list(curr_positions):
+                if position.sid.symbol in prev_pos_list:
+                    prev_stock_pos = prev_pos.loc[position.sid.symbol]
+                    gain_today = position.last_sale_price - prev_stock_pos['last_price']
+                    pct_gain_today = str(round((gain_today / prev_stock_pos['last_price']) * 100, 4)) + ' %'
+                    gain_total = position.last_sale_price - position.cost_basis
+                    pct_gain_total = str(round((gain_total / position.cost_basis) * 100, 4)) + ' %'
+                    stock_email.loc[position.asset] = [position.asset.symbol, position.amount, round(position.cost_basis, 4),
+                                          prev_stock_pos['last_price'], position.last_sale_price,
+                                          gain_today, pct_gain_today, gain_total, pct_gain_total,
+                                          position.amount * position.last_sale_price]
+                else:
+                    stock_email.loc[position.asset] = [position.asset.symbol, position.amount, round(position.cost_basis, 4),
+                                            '-', position.last_sale_price,
+                                            '-', '-', '-', '-',
+                                            position.amount * position.last_sale_price]
 
-            sql = "INSERT INTO daily_portfolio VALUES ('{}', '{}', '{}');" \
-                .format(context.datetime.date(), self.strategy_data.get('algo_name'), context.portfolio.portfolio_value)
+            portfolio = context.portfolio
+            stock_email = stock_email.join(pd.DataFrame(portfolio.current_portfolio_weights, columns=['Weightage']))
+            stock_email['Weightage'] = round(stock_email['Weightage'] * 100, 4).astype(str) + ' %'
+            port_email = pd.Series([portfolio.starting_cash, round(portfolio.portfolio_value, 4),
+                                    round(portfolio.pnl, 4), str(round(portfolio.returns, 4))+' %',
+                                    round(portfolio.cash, 4), round(portfolio.positions_value, 4)],
+                                   index=['Book Value', 'Portfolio Value', 'Net Gain', 'Percent Net Gain',
+                                          'Cash Value', 'Position Value'])
 
+            message = "<p><h3>Holdings Summary</h3></p>" + stock_email.to_html(index=False) \
+                      + "<p><h3>Portfolio Summary</h3></p>" + pd.DataFrame(port_email).T.to_html(index=False)
+            subject = '{} : Daily Summary - {}'.format(self.strategy_data.get('algo_name'), run_date)
+            self.email_service.SendNotifications(subject, message)
+
+            prev_run_update_sql = "update prev_run_date set date='{}' where algo_id={}".format(run_date, algo_id)
             with db_engine.connect() as connection:
                 try:
-                    connection.execute(sql)
+                    for position in list(curr_positions):
+                        insert_holding_sql = "Insert into daily_holdings (date, algo_id, holding_name, quantity, " \
+                                             "buy_price, last_price) values ('{}',{},'{}',{},{},{})"\
+                            .format(run_date, algo_id, position.sid.symbol, position.amount,
+                                    round(position.cost_basis, 4), position.last_sale_price)
+                        connection.execute(insert_holding_sql)
+                    connection.execute(prev_run_update_sql)
                 except Exception as e:
                     print(e)
 
