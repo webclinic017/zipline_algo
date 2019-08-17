@@ -20,8 +20,8 @@ class Strategy:
         self.strategy_data.get('initialize')(context)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.initialize()
-        # else:
-        self.email_service.initialize()
+        else:
+            self.email_service.initialize()
 
     def SendMessage(self, subject, message):
         if self.strategy_data.get('live_trading', False) is True:
@@ -37,7 +37,7 @@ class Strategy:
         self.strategy_data.get('analyze')(context, data)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.finalize()
-        if self.strategy_data.get('live_trading', False) is False:
+        else:
             algo_id = self.strategy_data.get('algo_id')
             db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
             prev_date_sql = "select date from prev_run_date where algo_id={}".format(algo_id)
