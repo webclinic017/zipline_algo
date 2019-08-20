@@ -8,12 +8,16 @@ from strategy import Strategy
 from alphacompiler.data.sf1_fundamentals import Fundamentals
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
-from zipline.utils.events import date_rules
 import numpy as np
+from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function)
 from utils.log_utils import setup_logging
 from long_term_low_risk.ltlr_config import config
 import argparse
+from sqlalchemy import create_engine
+import os
+import pickle
+from pathlib import Path
 
 
 # stop loss non addition limit set to 15 days
@@ -31,6 +35,34 @@ def initialize(context):
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
     context.turnover_count = 0
+    # context.rebalance = True
+
+
+def before_trading_start(context, data):
+    context.pipeline_data = pipeline_output('my_pipeline')
+    if context.live_trading is False:
+        schedule_function(
+            rebalance,
+            date_rule=date_rules.month_start()
+        )
+    else:
+        try:
+            with open('stop_loss_list.pickle', 'rb') as handle:
+                context.stop_loss_list = pickle.load(handle)
+        except:
+            context.stop_loss_list = pd.Series()
+    # context.rebalance = True
+    # db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
+    # rebalance_sql = "select rebalance_due from algo_master where algo_id={}".format(context.algo_id)
+    # rebalance = pd.read_sql(rebalance_sql, db_engine)['rebalance_due'][0]
+    # if rebalance == 'True':
+    #     context.rebalance = True
+
+
+def after_trading_end(context, data):
+    if context.live_trading is True:
+        with open('stop_loss_list.pickle', 'wb') as handle:
+            pickle.dump(context.stop_loss_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def analyze(context, data):
@@ -71,15 +103,8 @@ def recalc_sector_wise_exposure(context):
         context.sector_wise_exposure[sector] = sector_exposure
 
 
-def before_trading_start(context, data):
-    context.pipeline_data = pipeline_output('my_pipeline')
-    schedule_function(
-        rebalance,
-        date_rule=date_rules.month_start()
-    )
-
-
 def rebalance(context, data):
+    print("-----Rebalance method Called-------")
     positions = list(context.portfolio.positions.values())
     pipeline_data = context.pipeline_data
     cash = context.portfolio.cash
@@ -140,8 +165,8 @@ def rebalance(context, data):
                 # if avg_vol < 10000:
                 #     continue
 
-                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                min_vol = data.history(stock, 'volume', 50, '1d').min()
+                avg_vol = data.history(stock, 'volume', 50, '1d')[:-1].mean()
+                min_vol = data.history(stock, 'volume', 50, '1d')[:-1].min()
                 price = data.history(stock, 'price', 1, '1d').item()
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
@@ -172,12 +197,29 @@ def rebalance(context, data):
                 position_list.append(stock)
                 if len(position_list) >= 25:
                     break
+    # context.rebalance = False
+    # update_rebalance_due(context)
+
+
+def update_rebalance_due(context):
+    db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
+    rebalance_sql = "update algo_master set rebalance_due='{}' where algo_id={}".format(context.rebalance, context.algo_id)
+    with db_engine.connect() as connection:
+        try:
+            connection.execute(rebalance_sql)
+        except Exception as e:
+            print(e)
 
 
 def handle_data(context, data):
-    positions = list(context.portfolio.positions.values())
-    stop_list = context.stop_loss_list
+    # if context.rebalance:
+    #     print("calling rebalance")
+    #     rebalance(context, data)
 
+    for symbol, position in context.portfolio.positions.items():
+        data.current(symbol, 'price')
+    stop_list = context.stop_loss_list
+    positions = list(context.portfolio.positions.values())
     # update stop loss list
     for i1, s1 in stop_list.items():
         stop_list = stop_list.drop(index=[i1])
@@ -197,10 +239,12 @@ def handle_data(context, data):
         # month_old_price = data.history(position.asset, 'close', 22, '1d')[:1][0]
         # monthly_gain_loss = float(
         #     "{0:.2f}".format((position.last_sale_price - month_old_price) * 100 / month_old_price))
+        if not position.amount > 0:
+            continue
         net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
-            strategy.SendMessage('Sell Order', 'Buy all shares of {}'.format(str(position.asset.symbol)))
+            strategy.SendMessage('Sell Order', 'Sell all shares of {}'.format(str(position.asset.symbol)))
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
@@ -269,9 +313,11 @@ if __name__ == '__main__':
               'handle_data': handle_data,
               'analyze': analyze,
               'before_trading_start': before_trading_start,
+              'after_trading_end': after_trading_end,
               'bundle': 'quandl',
               'capital_base': config.get('capital_base'),
-              'algo_name': 'long_term_low_risk',
+              'algo_name': config.get('name'),
+              'algo_id': config.get('id'),
               'benchmark_symbol': config.get('benchmark_symbol')}
 
     if args.live_mode == 'True':
@@ -280,6 +326,8 @@ if __name__ == '__main__':
         print("Running in live mode.")
         kwargs['tws_uri'] = 'localhost:7497:1232'
         kwargs['live_trading'] = True
+    else:
+        kwargs['live_trading'] = False
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()

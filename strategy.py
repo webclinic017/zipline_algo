@@ -17,6 +17,8 @@ class Strategy:
         self.email_service = EmailService()
 
     def initialize(self, context):
+        context.algo_id = self.strategy_data.get('algo_id')
+        context.live_trading = self.strategy_data.get('live_trading')
         self.strategy_data.get('initialize')(context)
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.initialize()

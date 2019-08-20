@@ -177,6 +177,7 @@ class Analyzer:
 
             daily_returns = daily_returns.drop(daily_returns.index.difference(benchmark_returns.index))
             benchmark_returns = benchmark_returns.drop(benchmark_returns.index.difference(daily_returns.index))
+            benchmark_returns = benchmark_returns.loc[~benchmark_returns.index.duplicated(keep='first')]
 
             ytd_benchmark_returns = benchmark_returns[
                 benchmark_returns.index >= datetime.datetime(benchmark_returns.index[-1].year, 1, 1).date()]
