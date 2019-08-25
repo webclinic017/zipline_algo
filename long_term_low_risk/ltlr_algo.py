@@ -37,15 +37,16 @@ def initialize(context):
     context.sector_stocks = {}
     context.turnover_count = 0
 
-
-def before_trading_start(context, data):
-    context.pipeline_data = pipeline_output('my_pipeline')
     if context.live_trading is False:
         schedule_function(
             rebalance,
             date_rule=date_rules.month_start()
         )
-    else:
+
+
+def before_trading_start(context, data):
+    context.pipeline_data = pipeline_output('my_pipeline')
+    if context.live_trading is True:
         try:
             with open('stop_loss_list.pickle', 'rb') as handle:
                 context.stop_loss_list = pickle.load(handle)
@@ -219,9 +220,10 @@ def update_rebalance_due(context):
 
 
 def handle_data(context, data):
-    for symbol, position in context.portfolio.positions.items():
-        data.current(symbol, 'price')
-    time.sleep(60)
+    if context.live_trading is True:
+        for symbol, position in context.portfolio.positions.items():
+            data.current(symbol, 'price')
+        time.sleep(60)
 
     stop_list = context.stop_loss_list
     # update stop loss list

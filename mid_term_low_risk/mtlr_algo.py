@@ -61,6 +61,12 @@ def initialize(context):
     # sector_stocks: dictionary of which stocks are present as part of which sector, it is update on buy/sell orders
     context.sector_stocks = {}
     context.turnover_count = 0
+    # scheduling the rebalance function to be called at start of each week
+    if context.live_trading is False:
+        schedule_function(
+            rebalance,
+            date_rule=date_rules.week_start()
+        )
 
 
 def before_trading_start(context, data):
@@ -72,13 +78,7 @@ def before_trading_start(context, data):
     :return: None, updated value for pipeline data for the day
     """
     context.pipeline_data = pipeline_output('my_pipeline')
-    # scheduling the rebalance function to be called at start of each week
-    if context.live_trading is False:
-        schedule_function(
-            rebalance,
-            date_rule=date_rules.week_start()
-        )
-    else:
+    if context.live_trading is True:
         try:
             with open('stop_loss_list.pickle', 'rb') as handle:
                 context.stop_loss_list = pickle.load(handle)
@@ -281,11 +281,12 @@ def handle_data(context, data):
     :param data: mandatory to call as part of scheduled function, unused in our case
     :return: None
     """
-    # Connect to delayed data pricing as live pricing is not subscribed
-    for symbol, position in context.portfolio.positions.items():
-        data.current(symbol, 'price')
-    # Wait for 1 min to let the delayed data subscription be completed
-    time.sleep(60)
+    # Connect to delayed data pricing as live pricing is not subscribed (only in live mode)
+    if context.live_trading is True:
+        for symbol, position in context.portfolio.positions.items():
+            data.current(symbol, 'price')
+        # Wait for 1 min to let the delayed data subscription be completed
+        time.sleep(60)
     # get the list of current positions and store it in the local variable called positions
     positions = list(context.portfolio.positions.values())
     # get the stop list and store it in the local variable called stop_list
