@@ -4,5 +4,7 @@ config = {
     'end_date': 20190331,
     # capital to start with
     'capital_base': 100000,
-    'benchmark_symbol': 'SPY'
+    'benchmark_symbol': 'SPY',
+    'name': 'mid_term_low_risk',
+    'id': 3
 }

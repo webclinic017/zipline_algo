@@ -14,6 +14,8 @@ from zipline.api import (attach_pipeline, order_target_percent, order_target, pi
 from utils.log_utils import setup_logging
 from mid_term_low_risk.mtlr_config import config
 import argparse
+import pickle
+import time
 
 
 """
@@ -60,11 +62,34 @@ def initialize(context):
     context.sector_stocks = {}
     context.turnover_count = 0
 
+
+def before_trading_start(context, data):
+    """
+    This function is called every trading day before the start of trading. Any calculations or actions that needs to be
+    done before starting the trading happens in before_trading_start function
+    :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
+    :param data: mandatory to call as part of scheduled function, unused in our case
+    :return: None, updated value for pipeline data for the day
+    """
+    context.pipeline_data = pipeline_output('my_pipeline')
     # scheduling the rebalance function to be called at start of each week
-    schedule_function(
-        rebalance,
-        date_rule=date_rules.week_start()
-    )
+    if context.live_trading is False:
+        schedule_function(
+            rebalance,
+            date_rule=date_rules.week_start()
+        )
+    else:
+        try:
+            with open('stop_loss_list.pickle', 'rb') as handle:
+                context.stop_loss_list = pickle.load(handle)
+        except:
+            context.stop_loss_list = pd.Series()
+
+
+def after_trading_end(context, data):
+    if context.live_trading is True:
+        with open('stop_loss_list.pickle', 'wb') as handle:
+            pickle.dump(context.stop_loss_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def analyze(context, data):
@@ -97,7 +122,7 @@ def make_pipeline():
     )
 
 
-def recalc_sector_wise_exposure(context):
+def recalc_sector_wise_exposure(context, data):
     """
     The function is used to update the portfolio exposure for each sector
     :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
@@ -110,20 +135,13 @@ def recalc_sector_wise_exposure(context):
         for stock in stocks:
             position = context.portfolio.positions.get(stock)
             if position is not None:
-                exposure = (position.last_sale_price * position.amount) / net
+                if position.last_sale_price == 0:
+                    last_price = data.history(position.asset, 'close', 1, '1d')[0]
+                else:
+                    last_price = position.last_sale_price
+                exposure = (last_price * position.amount) / net
                 sector_exposure += exposure
         context.sector_wise_exposure[sector] = sector_exposure
-
-
-def before_trading_start(context, data):
-    """
-    This function is called every trading day before the start of trading. Any calculations or actions that needs to be
-    done before starting the trading happens in before_trading_start function
-    :param context: global variable used through the backtest for carrying forwarding the parameter values to next day
-    :param data: mandatory to call as part of scheduled function, unused in our case
-    :return: None, updated value for pipeline data for the day
-    """
-    context.pipeline_data = pipeline_output('my_pipeline')
 
 
 def rebalance(context, data):
@@ -135,6 +153,7 @@ def rebalance(context, data):
     :param data: mandatory to call as part of scheduled function, unused in our case
     :return: None
     """
+    print("-----Rebalance method Called-------")
     # get the list of current positions and store it in the local variable called positions
     positions = list(context.portfolio.positions.values())
 
@@ -148,7 +167,7 @@ def rebalance(context, data):
     stop_list = context.stop_loss_list
 
     # call the recalc function to update the exposure to all sectors
-    recalc_sector_wise_exposure(context)
+    recalc_sector_wise_exposure(context, data)
 
     benchmark_dma = get_dma_returns(context, dma, data.current_dt)
     if benchmark_dma < 0:
@@ -181,7 +200,11 @@ def rebalance(context, data):
 
     net = context.portfolio.portfolio_value
     for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
+        exposure = (last_price * position.amount) / net
         # selling half to book profit
         if exposure > 0.15:
             # order_target_percent is a zipline function that allows to place orders based on the percentage target
@@ -208,20 +231,15 @@ def rebalance(context, data):
             if stock not in position_list and stock not in stop_list:
 
                 # Calculate 50day average volume for the stock
-                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                avg_vol = data.history(stock, 'volume', 50, '1d')[:-1].mean()
+                min_vol = data.history(stock, 'volume', 50, '1d')[:-1].min()
+                # get yesterday's closing price of the stock
+                price = data.history(stock, 'price', 1, '1d').item()
                 # Only buy if the 50day average volume for the stock is above 10,000 to prevent low traded stocks to
                 # enter our portfolio
-                # if avg_vol < 10000:
-                #     continue
-
-                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                min_vol = data.history(stock, 'volume', 50, '1d').min()
-                price = data.history(stock, 'price', 1, '1d').item()
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
 
-                # get yesterday's closing price of the stock
-                price = data.history(stock, 'price', 1, '1d').item()
                 # get the sector of the stock
                 sector = interested_assets.loc[stock].sector
                 # get the quantity of stock that should be bought based on our exposure criteria
@@ -263,6 +281,11 @@ def handle_data(context, data):
     :param data: mandatory to call as part of scheduled function, unused in our case
     :return: None
     """
+    # Connect to delayed data pricing as live pricing is not subscribed
+    for symbol, position in context.portfolio.positions.items():
+        data.current(symbol, 'price')
+    # Wait for 1 min to let the delayed data subscription be completed
+    time.sleep(60)
     # get the list of current positions and store it in the local variable called positions
     positions = list(context.portfolio.positions.values())
     # get the stop list and store it in the local variable called stop_list
@@ -289,8 +312,15 @@ def handle_data(context, data):
     for position in positions:
         # update the position_list as the loop runs everytime
         position_list.append(position.asset)
+        if not position.amount > 0:
+            continue
+        # If today's price is not yet available because of the delay, use previous day closing price
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
         # calculate the net percentage change for the stock
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
+        net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis)*100/position.cost_basis))
         # if the net change is less then -5%, trigger stop loss rule and sell the stock
         if net_gain_loss < -3:
             # order_target is a zipline function that allows to place orders based on the target number of stocks that
@@ -393,15 +423,21 @@ if __name__ == '__main__':
               'handle_data': handle_data,
               'analyze': analyze,
               'before_trading_start': before_trading_start,
+              'after_trading_end': after_trading_end,
               'bundle': 'quandl',
               'capital_base': config.get('capital_base'),
               'algo_name': 'mid_term_low_risk',
+              'algo_id': config.get('id'),
               'benchmark_symbol': config.get('benchmark_symbol')}
 
     if args.live_mode == 'True':
+        if os.path.exists('test.state'):
+            os.remove('test.state')
         print("Running in live mode.")
         kwargs['tws_uri'] = 'localhost:7497:1232'
         kwargs['live_trading'] = True
+    else:
+        kwargs['live_trading'] = False
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()

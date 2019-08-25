@@ -91,14 +91,18 @@ def make_pipeline():
     )
 
 
-def recalc_sector_wise_exposure(context):
+def recalc_sector_wise_exposure(context, data):
     net = context.portfolio.portfolio_value
     for sector, stocks in context.sector_stocks.items():
         sector_exposure = 0
         for stock in stocks:
             position = context.portfolio.positions.get(stock)
             if position is not None:
-                exposure = (position.last_sale_price * position.amount) / net
+                if position.last_sale_price == 0:
+                    last_price = data.history(position.asset, 'close', 1, '1d')[0]
+                else:
+                    last_price = position.last_sale_price
+                exposure = (last_price * position.amount) / net
                 sector_exposure += exposure
         context.sector_wise_exposure[sector] = sector_exposure
 
@@ -110,7 +114,7 @@ def rebalance(context, data):
     cash = context.portfolio.cash
     stop_list = context.stop_loss_list
 
-    recalc_sector_wise_exposure(context)
+    recalc_sector_wise_exposure(context, data)
 
     benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
@@ -142,7 +146,11 @@ def rebalance(context, data):
 
     net = context.portfolio.portfolio_value
     for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
+        exposure = (last_price * position.amount) / net
         # selling half to book profit
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
@@ -178,7 +186,6 @@ def rebalance(context, data):
                 # if monthly_gain_loss < -5:
                 #     continue
 
-                price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
                 quantity = get_quantity(context.portfolio.portfolio_value,
                                         context.sector_wise_exposure, sector, price, cash)
@@ -224,15 +231,15 @@ def handle_data(context, data):
         if s1 > 0:
             stop_list = stop_list.append(pd.Series([s1], index=[i1]))
 
+    positions = list(context.portfolio.positions.values())
+
     benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
-        sell_all(list(context.portfolio.positions.values()), context)
+        sell_all(positions, context)
         return
 
     position_list = []
-
     # Sell logic
-    positions = list(context.portfolio.positions.values())
     for position in positions:
         position_list.append(position.asset)
         # month_old_price = data.history(position.asset, 'close', 22, '1d')[:1][0]

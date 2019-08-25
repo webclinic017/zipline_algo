@@ -14,6 +14,8 @@ from zipline.api import (attach_pipeline, order_target_percent, order_target, pi
 from utils.log_utils import setup_logging
 from long_term_high_risk.lthr_config import config
 import argparse
+import pickle
+import time
 
 
 # stop loss non addition limit set to 5 days
@@ -32,10 +34,26 @@ def initialize(context):
     context.sector_stocks = {}
     context.turnover_count = 0
 
-    schedule_function(
-        rebalance,
-        date_rule=date_rules.month_start()
-    )
+
+def before_trading_start(context, data):
+    context.pipeline_data = pipeline_output('my_pipeline')
+    if context.live_trading is False:
+        schedule_function(
+            rebalance,
+            date_rule=date_rules.month_start()
+        )
+    else:
+        try:
+            with open('stop_loss_list.pickle', 'rb') as handle:
+                context.stop_loss_list = pickle.load(handle)
+        except:
+            context.stop_loss_list = pd.Series()
+
+
+def after_trading_end(context, data):
+    if context.live_trading is True:
+        with open('stop_loss_list.pickle', 'wb') as handle:
+            pickle.dump(context.stop_loss_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def analyze(context, data):
@@ -64,7 +82,7 @@ def make_pipeline():
     )
 
 
-def recalc_sector_wise_exposure(context):
+def recalc_sector_wise_exposure(context, data):
     # loop thru all the positions
     net = context.portfolio.portfolio_value
     for sector, stocks in context.sector_stocks.items():
@@ -72,13 +90,13 @@ def recalc_sector_wise_exposure(context):
         for stock in stocks:
             position = context.portfolio.positions.get(stock)
             if position is not None:
-                exposure = (position.last_sale_price * position.amount) / net
+                if position.last_sale_price == 0:
+                    last_price = data.history(position.asset, 'close', 1, '1d')[0]
+                else:
+                    last_price = position.last_sale_price
+                exposure = (last_price * position.amount) / net
                 sector_exposure += exposure
         context.sector_wise_exposure[sector] = sector_exposure
-
-
-def before_trading_start(context, data):
-    context.pipeline_data = pipeline_output('my_pipeline')
 
 
 def rebalance(context, data):
@@ -87,7 +105,7 @@ def rebalance(context, data):
     stop_list = context.stop_loss_list
     pipeline_data = context.pipeline_data
 
-    recalc_sector_wise_exposure(context)
+    recalc_sector_wise_exposure(context, data)
 
     benchmark_dma = get_dma_returns(context, 70, data.current_dt)
     if benchmark_dma < 0:
@@ -114,7 +132,11 @@ def rebalance(context, data):
 
     net = context.portfolio.portfolio_value
     for position in context.portfolio.positions.values():
-        exposure = (position.last_sale_price * position.amount) / net
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
+        exposure = (last_price * position.amount) / net
         # selling half to book profit
         if exposure > 0.15:
             order_target_percent(position.asset, exposure / 2)
@@ -132,13 +154,13 @@ def rebalance(context, data):
             # only buy if not part of positions already
             # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
-                avg_vol = data.history(stock, 'volume', 50, '1d').mean()
+                avg_vol = data.history(stock, 'volume', 50, '1d')[:-1].mean()
                 if avg_vol < 10000:
                     continue
 
                 price = data.history(stock, 'price', 1, '1d').item()
                 sector = interested_assets.loc[stock].sector
-                quantity = get_exposure(context.portfolio.portfolio_value,
+                quantity = get_quantity(context.portfolio.portfolio_value,
                                         context.sector_wise_exposure, sector, price, cash)
 
                 if quantity > 0 and data.can_trade(stock):
@@ -159,6 +181,10 @@ def rebalance(context, data):
 
 
 def handle_data(context, data):
+    for symbol, position in context.portfolio.positions.items():
+        data.current(symbol, 'price')
+    time.sleep(60)
+
     positions = list(context.portfolio.positions.values())
     stop_list = context.stop_loss_list
 
@@ -178,8 +204,16 @@ def handle_data(context, data):
     position_list = []
     for position in positions:
         position_list.append(position.asset)
+
+        if not position.amount > 0:
+            continue
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
+
         # sell at stop loss
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis)*100/position.cost_basis))
+        net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis)*100/position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
             strategy.SendMessage('Sell Order', 'Buy all shares of {}'.format(str(position.asset.symbol)))
@@ -198,7 +232,7 @@ def handle_data(context, data):
     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
 
-def get_exposure(portfolio_value, sector_wise_exposure, sector, price, cash):
+def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
     available_exposure = cash / portfolio_value
     if sector in sector_wise_exposure:
         sector_exposure = sector_wise_exposure.get(sector)
@@ -246,15 +280,21 @@ if __name__ == '__main__':
               'handle_data': handle_data,
               'analyze': analyze,
               'before_trading_start': before_trading_start,
+              'after_trading_end': after_trading_end,
               'bundle': 'quandl',
               'capital_base': config.get('capital_base'),
               'algo_name': 'long_term_high_risk',
+              'algo_id': config.get('id'),
               'benchmark_symbol': config.get('benchmark_symbol')}
 
     if args.live_mode == 'True':
+        if os.path.exists('test.state'):
+            os.remove('test.state')
         print("Running in live mode.")
         kwargs['tws_uri'] = 'localhost:7497:1232'
         kwargs['live_trading'] = True
+    else:
+        kwargs['live_trading'] = False
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()
