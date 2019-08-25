@@ -18,6 +18,7 @@ from sqlalchemy import create_engine
 import os
 import pickle
 from pathlib import Path
+import time
 
 
 # stop loss non addition limit set to 15 days
@@ -35,7 +36,6 @@ def initialize(context):
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
     context.turnover_count = 0
-    # context.rebalance = True
 
 
 def before_trading_start(context, data):
@@ -212,28 +212,27 @@ def update_rebalance_due(context):
 
 
 def handle_data(context, data):
-    # if context.rebalance:
-    #     print("calling rebalance")
-    #     rebalance(context, data)
-
     for symbol, position in context.portfolio.positions.items():
         data.current(symbol, 'price')
+    time.sleep(60)
+
     stop_list = context.stop_loss_list
-    positions = list(context.portfolio.positions.values())
     # update stop loss list
     for i1, s1 in stop_list.items():
-        stop_list = stop_list.drop(index=[i1])
+        stop_list = stop_list.drop(labels=[i1])
         s1 -= 1
         if s1 > 0:
             stop_list = stop_list.append(pd.Series([s1], index=[i1]))
 
     benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
-        sell_all(positions, context)
+        sell_all(list(context.portfolio.positions.values()), context)
         return
 
-    # Sell logic
     position_list = []
+
+    # Sell logic
+    positions = list(context.portfolio.positions.values())
     for position in positions:
         position_list.append(position.asset)
         # month_old_price = data.history(position.asset, 'close', 22, '1d')[:1][0]
@@ -241,10 +240,14 @@ def handle_data(context, data):
         #     "{0:.2f}".format((position.last_sale_price - month_old_price) * 100 / month_old_price))
         if not position.amount > 0:
             continue
-        net_gain_loss = float("{0:.2f}".format((position.last_sale_price - position.cost_basis) * 100 / position.cost_basis))
+        if position.last_sale_price == 0:
+            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+        else:
+            last_price = position.last_sale_price
+        net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
-            strategy.SendMessage('Sell Order', 'Sell all shares of {}'.format(str(position.asset.symbol)))
+            strategy.SendMessage('Stop loss Sell Order', 'Sell all shares of {}'.format(str(position.asset.symbol)))
             context.turnover_count += 1
             try:
                 context.sector_stocks[context.pipeline_data.loc[position.asset].sector].remove(position.asset)
