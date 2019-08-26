@@ -59,8 +59,12 @@ class Strategy:
                                    'Dollar Gain Today', 'Pct Gain Today', 'Dollar Gain Net', 'Pct Gain Net',
                                    'Market Value']
             stock_email = pd.DataFrame(columns=stock_email_columns)
+            sold_list = []
             for position in list(curr_positions):
                 if position.sid.symbol in prev_pos_list:
+                    if position.amount == 0:
+                        sold_list.append(position)
+                        continue
                     prev_stock_pos = prev_pos.loc[position.sid.symbol]
                     gain_today = position.last_sale_price - prev_stock_pos['last_price']
                     pct_gain_today = str(round((gain_today / prev_stock_pos['last_price']) * 100, 4)) + ' %'
@@ -77,12 +81,13 @@ class Strategy:
                                             position.amount * position.last_sale_price]
 
             portfolio = context.portfolio
-            stock_email = stock_email.join(pd.DataFrame(portfolio.current_portfolio_weights, columns=['Weightage']))
-            stock_email['Weightage'] = round(stock_email['Weightage'] * 100, 4).astype(str) + ' %'
-            port_email = pd.Series([portfolio.starting_cash, round(portfolio.portfolio_value, 4),
-                                    round(portfolio.pnl, 4), str(round(portfolio.returns, 4))+' %',
+            # stock_email = stock_email.join(pd.DataFrame(portfolio.current_portfolio_weights, columns=['Weightage']))
+            # stock_email['Weightage'] = round(stock_email['Weightage'] * 100, 4).astype(str) + ' %'
+            port_email = pd.Series([round(portfolio.portfolio_value, 4),
+                                    round(portfolio.pnl, 4),
+                                    str(round(portfolio.pnl/(portfolio.portfolio_value-portfolio.pnl), 4))+' %',
                                     round(portfolio.cash, 4), round(portfolio.positions_value, 4)],
-                                   index=['Book Value', 'Portfolio Value', 'Net Gain', 'Percent Net Gain',
+                                   index=['Portfolio Value', 'Net Gain', 'Percent Net Gain',
                                           'Cash Value', 'Position Value'])
 
             message = "<p><h3>Holdings Summary</h3></p>" + stock_email.to_html(index=False) \
@@ -94,6 +99,8 @@ class Strategy:
             with db_engine.connect() as connection:
                 try:
                     for position in list(curr_positions):
+                        if position in sold_list:
+                            continue
                         insert_holding_sql = "Insert into daily_holdings (date, algo_id, holding_name, quantity, " \
                                              "buy_price, last_price) values ('{}',{},'{}',{},{},{})"\
                             .format(run_date, algo_id, position.sid.symbol, position.amount,
