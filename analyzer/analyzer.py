@@ -83,7 +83,7 @@ class Analyzer:
         else:
             benchmark_returns = context.trading_environment.benchmark_returns.copy()
             benchmark_returns.index = benchmark_returns.index.date
-            benchmark_returns = benchmark_returns.loc[~benchmark_returns.index.duplicated(keep='first')]
+            # benchmark_returns = benchmark_returns.loc[~benchmark_returns.index.duplicated(keep='first')]
 
             benchmark_return = benchmark_returns.loc[context.datetime.date()]
             benchmark_net = self.daily_data_df.iloc[-1].benchmark_net + \

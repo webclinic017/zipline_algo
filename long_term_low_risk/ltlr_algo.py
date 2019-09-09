@@ -52,18 +52,24 @@ def before_trading_start(context, data):
                 context.stop_loss_list = pickle.load(handle)
         except:
             context.stop_loss_list = pd.Series()
-    # context.rebalance = True
-    # db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
-    # rebalance_sql = "select rebalance_due from algo_master where algo_id={}".format(context.algo_id)
-    # rebalance = pd.read_sql(rebalance_sql, db_engine)['rebalance_due'][0]
-    # if rebalance == 'True':
-    #     context.rebalance = True
+        try:
+            with open('sector_list.pickle', 'rb') as handle:
+                context.sector_stocks = pickle.load(handle)
+        except:
+            context.sector_stocks = {}
+        schedule_function(
+            rebalance,
+            date_rule=date_rules.month_start()
+        )
+    context.logic_run_done = False
 
 
 def after_trading_end(context, data):
     if context.live_trading is True:
         with open('stop_loss_list.pickle', 'wb') as handle:
             pickle.dump(context.stop_loss_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('sector_list.pickle', 'wb') as handle:
+            pickle.dump(context.sector_stocks, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def analyze(context, data):
@@ -173,10 +179,13 @@ def rebalance(context, data):
                 # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
                 # if avg_vol < 10000:
                 #     continue
-
-                avg_vol = data.history(stock, 'volume', 50, '1d')[:-1].mean()
-                min_vol = data.history(stock, 'volume', 50, '1d')[:-1].min()
-                price = data.history(stock, 'price', 1, '1d').item()
+                try:
+                    avg_vol = data.history(stock, 'volume', 52, '1d')[:-2].mean()
+                    min_vol = data.history(stock, 'volume', 52, '1d')[:-2].min()
+                    price = data.history(stock, 'price', 1, '1d').item()
+                except:
+                    print("Stock not present in IB: {}").format(str(stock.symbol))
+                    continue
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
 
@@ -205,21 +214,18 @@ def rebalance(context, data):
                 position_list.append(stock)
                 if len(position_list) >= 25:
                     break
-    # context.rebalance = False
-    # update_rebalance_due(context)
-
-
-def update_rebalance_due(context):
-    db_engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
-    rebalance_sql = "update algo_master set rebalance_due='{}' where algo_id={}".format(context.rebalance, context.algo_id)
-    with db_engine.connect() as connection:
-        try:
-            connection.execute(rebalance_sql)
-        except Exception as e:
-            print(e)
 
 
 def handle_data(context, data):
+    if context.logic_run_done is False:
+        try:
+            core_logic(context, data)
+            context.logic_run_done = True
+        except ValueError as e:
+            print(e)
+
+
+def core_logic(context, data):
     if context.live_trading is True:
         for symbol, position in context.portfolio.positions.items():
             data.current(symbol, 'price')
@@ -244,15 +250,14 @@ def handle_data(context, data):
     # Sell logic
     for position in positions:
         position_list.append(position.asset)
-        # month_old_price = data.history(position.asset, 'close', 22, '1d')[:1][0]
-        # monthly_gain_loss = float(
-        #     "{0:.2f}".format((position.last_sale_price - month_old_price) * 100 / month_old_price))
         if not position.amount > 0:
             continue
         if position.last_sale_price == 0:
             last_price = data.history(position.asset, 'close', 1, '1d')[0]
         else:
             last_price = position.last_sale_price
+        if last_price == 0:
+            raise ValueError("Prices not available")
         net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -3:
             order_target(position.asset, 0)
@@ -344,4 +349,5 @@ if __name__ == '__main__':
     strategy = Strategy(kwargs)
     strategy.run_algorithm()
 
-    input("Press any key to exit")
+    if args.live_mode != 'True':
+        input("Press any key to exit")

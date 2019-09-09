@@ -109,6 +109,7 @@ class Strategy:
                     connection.execute(prev_run_update_sql)
                 except Exception as e:
                     print(e)
+            self.strategy_data.get('after_trading_end')(context, data)
 
     def before_trading_start(self, context, data):
         self.strategy_data.get('before_trading_start')(context, data)
@@ -143,3 +144,5 @@ class Strategy:
         if self.strategy_data.get('live_trading', False) is False:
             self.analyzer.show_plot()
             sys.exit(self.analyzer.app.exec_())
+
+        run_algo_thread.join()
