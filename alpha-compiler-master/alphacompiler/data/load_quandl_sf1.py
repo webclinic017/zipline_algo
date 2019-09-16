@@ -14,7 +14,7 @@ import datetime
 from os import listdir
 import os
 from pathlib import Path
-
+import shutil
 
 BASE = str(Path.home())
 DS_NAME = 'SHARADAR/SF1'   # quandl DataSet code
@@ -24,6 +24,10 @@ START_DATE = '1999-01-01'
 END_DATE = datetime.datetime.today().strftime('%Y-%m-%d')
 
 if not os.path.exists(os.path.join(BASE, RAW_FLDR)):
+    os.makedirs(os.path.join(BASE, RAW_FLDR))
+else:
+    shutil.rmtree(os.path.join(BASE, RAW_FLDR))
+    # os.rmdir(os.path.join(BASE, RAW_FLDR))
     os.makedirs(os.path.join(BASE, RAW_FLDR))
 
 FN = "SF1.npy"
@@ -81,8 +85,18 @@ if __name__ == '__main__':
 
     # demo()
     # fields = ["ROE_ART", "BVPS_ARQ", "SPS_ART", "FCFPS_ARQ", "PRICE"]
-    fields = ["revenue", "rnd", "netinc", "eps", "liabilities", "ebt", "ebitda", "dps", "marketcap", "gp", "pe", "ps1",
-               "divyield", "price"]
+    fields = ['accoci', 'assets', 'assetsavg',
+     'assetsc', 'assetsnc', 'assetturnover', 'bvps', 'capex', 'cashneq', 'cashnequsd', 'cor', 'consolinc',
+     'currentratio', 'de', 'debt', 'debtc', 'debtnc', 'debtusd', 'deferredrev', 'depamor', 'deposits', 'divyield',
+     'dps', 'ebit', 'ebitda', 'ebitdamargin', 'ebitdausd', 'ebitusd', 'ebt', 'eps', 'epsdil', 'epsusd', 'equity',
+     'equityavg', 'equityusd', 'ev', 'evebit', 'evebitda', 'fcf', 'fcfps', 'fxusd', 'gp', 'grossmargin', 'intangibles',
+     'intexp', 'invcap', 'invcapavg', 'inventory', 'investments', 'investmentsc', 'investmentsnc', 'liabilities',
+     'liabilitiesc', 'liabilitiesnc', 'marketcap', 'ncf', 'ncfbus', 'ncfcommon', 'ncfdebt', 'ncfdiv', 'ncff', 'ncfi',
+     'ncfinv', 'ncfo', 'ncfx', 'netinc', 'netinccmn', 'netinccmnusd', 'netincdis', 'netincnci', 'netmargin', 'opex',
+     'opinc', 'payables', 'payoutratio', 'pb', 'pe', 'pe1', 'ppnenet', 'prefdivis', 'price', 'ps', 'ps1', 'receivables',
+     'retearn', 'revenue', 'revenueusd', 'rnd', 'roa', 'roe', 'roic', 'ros', 'sbcomp', 'sgna', 'sharefactor',
+     'sharesbas', 'shareswa', 'shareswadil', 'sps', 'tangibles', 'taxassets', 'taxexp', 'taxliabilities', 'tbvps',
+     'workingcapital']
     num_tickers = all_tickers_for_bundle(fields, 'quandl')
     pack_sparse_data(num_tickers + 1,  # number of tickers in buldle + 1
                     os.path.join(BASE,RAW_FLDR),

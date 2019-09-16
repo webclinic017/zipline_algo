@@ -9,9 +9,20 @@ from pathlib import Path
 
 class Fundamentals(SparseDataFactor):
     # outputs = ["ROE_ART", "BVPS_ARQ", "SPS_ART", "FCFPS_ARQ", "PRICE"]
-    outputs = ["revenue", "rnd", "netinc", "eps", "liabilities", "ebt", "ebitda", "dps", "marketcap", "gp", "pe", "ps1",
-               "divyield", "price", "yoy_sales", "qoq_earnings"]
-
+    # outputs = ["revenue", "rnd", "netinc", "eps", "liabilities", "ebt", "ebitda", "dps", "marketcap", "gp", "pe", "ps1",
+    #            "divyield", "price", "yoy_sales", "qoq_earnings"]
+    outputs = ['accoci', 'assets', 'assetsavg', "yoy_sales", "qoq_earnings",
+     'assetsc', 'assetsnc', 'assetturnover', 'bvps', 'capex', 'cashneq', 'cashnequsd', 'cor', 'consolinc',
+     'currentratio', 'de', 'debt', 'debtc', 'debtnc', 'debtusd', 'deferredrev', 'depamor', 'deposits', 'divyield',
+     'dps', 'ebit', 'ebitda', 'ebitdamargin', 'ebitdausd', 'ebitusd', 'ebt', 'eps', 'epsdil', 'epsusd', 'equity',
+     'equityavg', 'equityusd', 'ev', 'evebit', 'evebitda', 'fcf', 'fcfps', 'fxusd', 'gp', 'grossmargin', 'intangibles',
+     'intexp', 'invcap', 'invcapavg', 'inventory', 'investments', 'investmentsc', 'investmentsnc', 'liabilities',
+     'liabilitiesc', 'liabilitiesnc', 'marketcap', 'ncf', 'ncfbus', 'ncfcommon', 'ncfdebt', 'ncfdiv', 'ncff', 'ncfi',
+     'ncfinv', 'ncfo', 'ncfx', 'netinc', 'netinccmn', 'netinccmnusd', 'netincdis', 'netincnci', 'netmargin', 'opex',
+     'opinc', 'payables', 'payoutratio', 'pb', 'pe', 'pe1', 'ppnenet', 'prefdivis', 'price', 'ps', 'ps1', 'receivables',
+     'retearn', 'revenue', 'revenueusd', 'rnd', 'roa', 'roe', 'roic', 'ros', 'sbcomp', 'sgna', 'sharefactor',
+     'sharesbas', 'shareswa', 'shareswadil', 'sps', 'tangibles', 'taxassets', 'taxexp', 'taxliabilities', 'tbvps',
+     'workingcapital']
     def __init__(self, *args, **kwargs):
         super(Fundamentals, self).__init__(*args, **kwargs)
         self.N = len(get_ticker_sid_dict_from_bundle("quandl")) + 1  # max(sid)+1 get this from the bundle
