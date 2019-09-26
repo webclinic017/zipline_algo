@@ -14,10 +14,8 @@ from zipline.api import (attach_pipeline, order_target_percent, order_target, pi
 from utils.log_utils import setup_logging
 from long_term_low_risk.ltlr_config import config
 import argparse
-from sqlalchemy import create_engine
 import os
 import pickle
-from pathlib import Path
 import time
 
 
