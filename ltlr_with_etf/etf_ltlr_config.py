@@ -5,6 +5,6 @@ config = {
     # capital to start with
     'capital_base': 100000,
     'benchmark_symbol': 'SPY',
-    'name': 'long_term_low_risk',
+    'name': 'etf_long_term_low_risk',
     'id': 1
 }

@@ -12,11 +12,13 @@ import numpy as np
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function, symbol)
 from utils.log_utils import setup_logging
-from long_term_low_risk.ltlr_config import config
+from ltlr_with_etf.etf_ltlr_config import config
 import argparse
 import os
 import pickle
 import time
+from pathlib import Path
+from sqlalchemy import create_engine
 
 
 # stop loss non addition limit set to 15 days
@@ -25,7 +27,7 @@ stop_loss_prevention_days = 15
 # max exposure per sector set to 15%
 max_sector_exposure = 0.21
 
-logger = setup_logging("long_term_low_risk")
+logger = setup_logging("etf_long_term_low_risk")
 
 
 def initialize(context):
@@ -36,7 +38,7 @@ def initialize(context):
     context.turnover_count = 0
 
     # etf stock
-    # context.etf_stock = symbol('GLD')
+    context.shorting_on = False
 
     if context.live_trading is False:
         schedule_function(
@@ -127,24 +129,15 @@ def rebalance(context, data):
     benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
         return
+    elif context.shorting_on:
+        sell_all_etfs(positions, context)
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    # filter assets based on
-    # 1. market cap is large cap (>10billion)
-    # 2. liabilities < 180bn
-    # 3. yoy sales > 3% or none
-    # 4. ipo should be earlier than at least two years or n/a
-    # 5. should have invested more than or equal 6% of total revenue in RND
-    # 6. net income should be positive
-    # 7. should not have a decrease in earnings
-    interested_assets = interested_assets.query("marketcap > 10000000000 "
-                                                "and liabilities < 180000000000 "
+    interested_assets = interested_assets.query("marketcap > 10000000000 and liabilities < 180000000000 "
                                                 "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
-                                                "and (ipoyear < {} or ipoyear == -1)"
-                                                "and ((100 * rnd) / revenue) >= 6"
-                                                "and netinc >= 0"
-                                                "and qoq_earnings >= 0"
+                                                "and (ipoyear < {} or ipoyear == -1) and ((100 * rnd) / revenue) >= 6"
+                                                "and netinc >= 0 and qoq_earnings >= 0"
                                                 .format(data.current_dt.year - 2))
 
     # sort the buy candidate stocks based on their quarterly earnings
@@ -176,10 +169,6 @@ def rebalance(context, data):
             # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list:
 
-                # Condition 1
-                # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                # if avg_vol < 10000:
-                #     continue
                 try:
                     avg_vol = data.history(stock, 'volume', 52, '1d')[:-2].mean()
                     min_vol = data.history(stock, 'volume', 52, '1d')[:-2].min()
@@ -189,13 +178,6 @@ def rebalance(context, data):
                     continue
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
-
-                # # Condition 2
-                # month_old_price = data.history(stock, 'close', 22, '1d')
-                # monthly_gain_loss = float(
-                #     "{0:.2f}".format((month_old_price[-1] - month_old_price[0]) * 100 / month_old_price[0]))
-                # if monthly_gain_loss < -5:
-                #     continue
 
                 sector = interested_assets.loc[stock].sector
                 quantity = get_quantity(context.portfolio.portfolio_value,
@@ -246,13 +228,15 @@ def core_logic(context, data):
     if benchmark_dma < 0:
         sell_all(positions, context)
         return
+    elif context.shorting_on:
+        sell_all_etfs(positions, context)
+        # The day dma turns positive and etfs are sold, there aren't any stocks left in portfolio, hence return
+        return
 
     position_list = []
+
     # Sell logic
     for position in positions:
-        # if position.asset == context.etf_stock:
-        #     order_target_percent(context.etf_stock, 0)
-        #     continue
         position_list.append(position.asset)
         if not position.amount > 0:
             continue
@@ -277,10 +261,6 @@ def core_logic(context, data):
             except Exception as e:
                 print(e)
 
-        # if net_gain_loss > 25:
-        #     order_target(position.asset, 0)
-        #     print("Profit booked for: {} on {}".format(position.asset.symbol, data.current_dt.strftime('%d/%m/%Y')))
-
     context.stop_loss_list = stop_list
     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
 
@@ -303,14 +283,39 @@ def get_quantity(portfolio_value, sector_wise_exposure, sector, price, cash):
 
 
 def sell_all(positions, context):
-    print("Sell All rule triggered for "+str(len(positions)))
+    if not context.shorting_on:
+        print("Sell All rule triggered for "+str(len(positions)))
+        for position in positions:
+            order_target_percent(position.asset, 0)
+            strategy.SendMessage('Sell All and Exit Market', 'Sell all shares of {}'.format(str(position.asset.symbol)))
+            context.turnover_count += 1
+
+        buy_etfs()
+        context.shorting_on = True
+
+
+def buy_etfs():
+    engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
+    etfs = pd.read_sql("select * from etf_ratios", engine)
+
+    cash = 100 - etfs['share'].sum()
+    if cash < 0:
+        print("ETF ratios are greater then 100 pct")
+        strategy.SendMessage('ETF ratios are greater then 100 pct')
+
+    for index, row in etfs.iterrows():
+        stock = symbol(row['symbol'])
+        order_target_percent(stock, row['share']/100)
+
+
+def sell_all_etfs(positions, context):
+    engine = create_engine('sqlite:///{}'.format(os.path.join(str(Path.home()), 'algodb.db')))
+    etfs = list(pd.read_sql("select symbol from etf_ratios", engine)['symbol'])
+
     for position in positions:
-        # if position.asset == context.etf_stock:
-        #     continue
-        order_target_percent(position.asset, 0)
-        strategy.SendMessage('Sell All and Exit Market', 'Sell all shares of {}'.format(str(position.asset.symbol)))
-        context.turnover_count += 1
-    # order_target_percent(context.etf_stock, 100)
+        if position in etfs:
+            order_target_percent(position.asset, 0)
+    context.shorting_on = False
 
 
 def get_dma_returns(context, period, dma_end_date):
