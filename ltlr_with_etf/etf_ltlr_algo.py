@@ -96,7 +96,8 @@ def make_pipeline():
             'ipoyear': ipos,
             'yoy_sales': fd.yoy_sales,
             'qoq_earnings': fd.qoq_earnings,
-            'sector': sectors
+            'sector': sectors,
+            'fcf': fd.fcf
         },
     )
 
@@ -134,10 +135,13 @@ def rebalance(context, data):
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    interested_assets = interested_assets.query("marketcap > 10000000000 and liabilities < 180000000000 "
+    interested_assets = interested_assets.query("marketcap > 10000000000 "
+                                                "and liabilities < 180000000000 "
                                                 "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
-                                                "and (ipoyear < {} or ipoyear == -1) and ((100 * rnd) / revenue) >= 6"
-                                                "and netinc >= 0 and qoq_earnings >= 0"
+                                                "and (ipoyear < {} or ipoyear == -1)"
+                                                "and ((100 * rnd) / revenue) >= 6"
+                                                "and netinc >= 0"
+                                                "and qoq_earnings >= 0"
                                                 .format(data.current_dt.year - 2))
 
     # sort the buy candidate stocks based on their quarterly earnings
@@ -224,7 +228,7 @@ def core_logic(context, data):
 
     positions = list(context.portfolio.positions.values())
 
-    benchmark_dma = get_dma_returns(context, 200, data.current_dt)
+    benchmark_dma = get_dma_returns(context, 65, data.current_dt)
     if benchmark_dma < 0:
         sell_all(positions, context)
         return
@@ -301,11 +305,14 @@ def buy_etfs():
     cash = 100 - etfs['share'].sum()
     if cash < 0:
         print("ETF ratios are greater then 100 pct")
-        strategy.SendMessage('ETF ratios are greater then 100 pct')
+        strategy.SendMessage('ETF ratio error','ETF ratios are greater then 100 pct')
 
     for index, row in etfs.iterrows():
-        stock = symbol(row['symbol'])
-        order_target_percent(stock, row['share']/100)
+        try:
+            stock = symbol(row['symbol'])
+            order_target_percent(stock, row['share']/100)
+        except:
+            print("Can not trade {}".format(row['symbol']))
 
 
 def sell_all_etfs(positions, context):

@@ -67,14 +67,6 @@ def populate_raw_data(tickers, fields, raw_path):
             print("error with ticker: {}".format(ticker))
 
 
-def demo():
-    # demo works on free data
-
-    tickers = {"WMT": 3173, "HD": 2912, "CSCO": 2809}
-    fields = ["GP", "CAPEX", "EBIT", "ASSETS"]
-    populate_raw_data(tickers, fields)
-
-
 def all_tickers_for_bundle(fields, bundle_name, raw_path=os.path.join(BASE,RAW_FLDR)):
     tickers = get_ticker_sid_dict_from_bundle(bundle_name)
     populate_raw_data(tickers, fields, raw_path)
@@ -83,23 +75,27 @@ def all_tickers_for_bundle(fields, bundle_name, raw_path=os.path.join(BASE,RAW_F
 
 if __name__ == '__main__':
 
-    # demo()
-    # fields = ["ROE_ART", "BVPS_ARQ", "SPS_ART", "FCFPS_ARQ", "PRICE"]
-    fields = ['accoci', 'assets', 'assetsavg',
-     'assetsc', 'assetsnc', 'assetturnover', 'bvps', 'capex', 'cashneq', 'cashnequsd', 'cor', 'consolinc',
-     'currentratio', 'de', 'debt', 'debtc', 'debtnc', 'debtusd', 'deferredrev', 'depamor', 'deposits', 'divyield',
-     'dps', 'ebit', 'ebitda', 'ebitdamargin', 'ebitdausd', 'ebitusd', 'ebt', 'eps', 'epsdil', 'epsusd', 'equity',
-     'equityavg', 'equityusd', 'ev', 'evebit', 'evebitda', 'fcf', 'fcfps', 'fxusd', 'gp', 'grossmargin', 'intangibles',
-     'intexp', 'invcap', 'invcapavg', 'inventory', 'investments', 'investmentsc', 'investmentsnc', 'liabilities',
-     'liabilitiesc', 'liabilitiesnc', 'marketcap', 'ncf', 'ncfbus', 'ncfcommon', 'ncfdebt', 'ncfdiv', 'ncff', 'ncfi',
-     'ncfinv', 'ncfo', 'ncfx', 'netinc', 'netinccmn', 'netinccmnusd', 'netincdis', 'netincnci', 'netmargin', 'opex',
-     'opinc', 'payables', 'payoutratio', 'pb', 'pe', 'pe1', 'ppnenet', 'prefdivis', 'price', 'ps', 'ps1', 'receivables',
-     'retearn', 'revenue', 'revenueusd', 'rnd', 'roa', 'roe', 'roic', 'ros', 'sbcomp', 'sgna', 'sharefactor',
-     'sharesbas', 'shareswa', 'shareswadil', 'sps', 'tangibles', 'taxassets', 'taxexp', 'taxliabilities', 'tbvps',
-     'workingcapital']
+    # fields = ['accoci', 'assets', 'assetsavg',
+    #  'assetsc', 'assetsnc', 'assetturnover', 'bvps', 'capex', 'cashneq', 'cashnequsd', 'cor', 'consolinc',
+    #  'currentratio', 'de', 'debt', 'debtc', 'debtnc', 'debtusd', 'deferredrev', 'depamor', 'deposits', 'divyield',
+    #  'dps', 'ebit', 'ebitda', 'ebitdamargin', 'ebitdausd', 'ebitusd', 'ebt', 'eps', 'epsdil', 'epsusd', 'equity',
+    #  'equityavg', 'equityusd', 'ev', 'evebit', 'evebitda', 'fcf', 'fcfps', 'fxusd', 'gp', 'grossmargin', 'intangibles',
+    #  'intexp', 'invcap', 'invcapavg', 'inventory', 'investments', 'investmentsc', 'investmentsnc', 'liabilities',
+    #  'liabilitiesc', 'liabilitiesnc', 'marketcap', 'ncf', 'ncfbus', 'ncfcommon', 'ncfdebt', 'ncfdiv', 'ncff', 'ncfi',
+    #  'ncfinv', 'ncfo', 'ncfx', 'netinc', 'netinccmn', 'netinccmnusd', 'netincdis', 'netincnci', 'netmargin', 'opex',
+    #  'opinc', 'payables', 'payoutratio', 'pb', 'pe', 'pe1', 'ppnenet', 'prefdivis', 'price', 'ps', 'ps1', 'receivables',
+    #  'retearn', 'revenue', 'revenueusd', 'rnd', 'roa', 'roe', 'roic', 'ros', 'sbcomp', 'sgna', 'sharefactor',
+    #  'sharesbas', 'shareswa', 'shareswadil', 'sps', 'tangibles', 'taxassets', 'taxexp', 'taxliabilities', 'tbvps',
+    #  'workingcapital']
+
+    fields = ['assets', 'capex', 'cor', 'currentratio', 'de', 'debt', 'divyield', 'ebit', 'ebitda', 'ebt', 'eps', 'fcf',
+              'grossmargin', 'inventory', 'investments', 'liabilities', 'marketcap', 'ncf', 'netinc', 'netmargin',
+              'opex', 'payables', 'payoutratio', 'pb', 'pe', 'receivables', 'revenue', 'rnd', 'roa', 'roe', 'sgna',
+              'taxassets', 'taxliabilities', 'workingcapital']
+
     num_tickers = all_tickers_for_bundle(fields, 'quandl')
     pack_sparse_data(num_tickers + 1,  # number of tickers in buldle + 1
-                    os.path.join(BASE,RAW_FLDR),
+                    os.path.join(BASE, RAW_FLDR),
                     fields,
                     os.path.join(BASE,FN))
 
