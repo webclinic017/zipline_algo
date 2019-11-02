@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 stop_loss_prevention_days = 15
 
 # max exposure per sector set to 15%
-max_sector_exposure = 0.21
+max_sector_exposure = 0.25
 
 logger = setup_logging("etf_long_term_low_risk")
 
@@ -97,7 +97,30 @@ def make_pipeline():
             'yoy_sales': fd.yoy_sales,
             'qoq_earnings': fd.qoq_earnings,
             'sector': sectors,
-            'fcf': fd.fcf
+            'fcf': fd.fcf,
+            'pb': fd.pb,
+            'assets': fd.assets,
+            'cor': fd.cor,
+            'currentratio': fd.currentratio,
+            'de': fd.de,
+            'ebitda': fd.ebitda,
+            'ebt': fd.ebt,
+            'grossmargin': fd.grossmargin,
+            'inventory': fd.inventory,
+            'ncf': fd.ncf,
+            'netmargin': fd.netmargin,
+            'opex': fd.opex,
+            'payables': fd.payables,
+            'payoutratio': fd.payoutratio,
+            'receivales': fd.receivables,
+            'roa': fd.roa,
+            'roe': fd.roe,
+            'sgna': fd.sgna,
+            'taxassets': fd.taxassets,
+            'taxliabilities': fd.taxliabilities,
+            'workingcapital': fd.workingcapital,
+            'capex': fd.capex
+
         },
     )
 
@@ -135,13 +158,10 @@ def rebalance(context, data):
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    interested_assets = interested_assets.query("marketcap > 10000000000 "
-                                                "and liabilities < 180000000000 "
-                                                "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
-                                                "and (ipoyear < {} or ipoyear == -1)"
-                                                "and ((100 * rnd) / revenue) >= 6"
-                                                "and netinc >= 0"
-                                                "and qoq_earnings >= 0"
+    interested_assets = interested_assets.query("pb > 5"
+                                                "and pe > 40"
+
+
                                                 .format(data.current_dt.year - 2))
 
     # sort the buy candidate stocks based on their quarterly earnings
@@ -228,12 +248,13 @@ def core_logic(context, data):
 
     positions = list(context.portfolio.positions.values())
 
-    benchmark_dma = get_dma_returns(context, 65, data.current_dt)
+    benchmark_dma = get_dma_returns(context, 200, data.current_dt)
     if benchmark_dma < 0:
         sell_all(positions, context)
         return
-    elif context.shorting_on:
+    elif context.shorting_on and benchmark_dma > 1:
         sell_all_etfs(positions, context)
+        rebalance(context, data)
         # The day dma turns positive and etfs are sold, there aren't any stocks left in portfolio, hence return
         return
 
