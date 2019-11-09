@@ -1,10 +1,10 @@
 config = {
     # start and end date for the backtest in yyyymmdd format string
-    'start_date': 19990901,
-    'end_date': 20190101,
+    'start_date': 20190715,
+    'end_date': 20191101,
     # capital to start with
     'capital_base': 100000,
     'benchmark_symbol': 'SPY',
-    'name': 'etf_long_term_low_risk',
+    'name': 'lowrisk_algo',
     'id': 1
 }

@@ -12,7 +12,7 @@ import numpy as np
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function, symbol)
 from utils.log_utils import setup_logging
-from ltlr_with_etf.etf_ltlr_config import config
+from lowrisk_algo.lowrisk_config import config
 import argparse
 import os
 import pickle
@@ -27,7 +27,7 @@ stop_loss_prevention_days = 15
 # max exposure per sector set to 15%
 max_sector_exposure = 0.25
 
-logger = setup_logging("etf_long_term_low_risk")
+logger = setup_logging("lowrisk_algo")
 
 
 def initialize(context):
@@ -112,7 +112,7 @@ def make_pipeline():
             'opex': fd.opex,
             'payables': fd.payables,
             'payoutratio': fd.payoutratio,
-            'receivales': fd.receivables,
+            'receivables': fd.receivables,
             'roa': fd.roa,
             'roe': fd.roe,
             'sgna': fd.sgna,
@@ -158,8 +158,17 @@ def rebalance(context, data):
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    interested_assets = interested_assets.query("pb > 5"
-                                                "and pe > 40"
+    interested_assets = interested_assets.query("netinc >= 100000000"
+                                                "and netinc <= 1000000000"
+                                                "and receivables >= 10000000"
+                                                "and receivables <= 2000000000"
+                                                "and rnd >= 200000000"
+                                                "and rnd <= 2000000000"
+                                                "and assets >= 1000000000"
+                                                "and assets <= 10000000000"
+                                                "and liabilities <= 20000000000"
+                                                "and revenue >= 2000000000"
+                                                "and fcf >= 250000000"
 
 
                                                 .format(data.current_dt.year - 2))
