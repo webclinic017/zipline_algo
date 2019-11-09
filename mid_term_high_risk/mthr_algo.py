@@ -21,7 +21,7 @@ import time
 # stop loss non addition limit set to 15 days
 stop_loss_prevention_days = 25
 # max exposure per sector set to 15%
-max_sector_exposure = 0.15
+max_sector_exposure = 0.17
 
 logger = setup_logging("mid_term_high_risk")
 
@@ -123,11 +123,12 @@ def rebalance(context, data):
     # 4. ipo should be earlier than at least two years
     # 5 sort by qoq_earnings
     interested_assets = interested_assets.query("marketcap < 2000000000 "
-                                                "and marketcap > 300000000"
-                                                "and liabilities < 180000000000 "
+                                                "and marketcap > 1000000000"
+                                                "and liabilities < 130000000000 "
                                                 "and (yoy_sales >= 0.2 or yoy_sales != yoy_sales)"
                                                 "and (ipoyear < {} or ipoyear == -1)"
                                                 "and pe < 300"
+                                                "and pe > 15"
                                                 .format(data.current_dt.year - 2))
 
     interested_assets = interested_assets.sort_values(by=['qoq_earnings'], ascending=False)
