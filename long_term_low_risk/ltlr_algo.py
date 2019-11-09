@@ -113,6 +113,7 @@ def recalc_sector_wise_exposure(context, data):
 
 
 def rebalance(context, data):
+    handle_data(context, data)
     print("-----Rebalance method Called-------")
     positions = list(context.portfolio.positions.values())
     pipeline_data = context.pipeline_data
@@ -167,11 +168,13 @@ def rebalance(context, data):
     for position in positions:
         position_list.append(position.asset)
 
+    exempt_list = ['MELI', 'GENZ', 'FRX', 'HSP', 'AGN1', 'BXLT', 'MEDI', 'ETEK1', 'DNA', 'PNU', 'SDS1', 'LLTC', 'KEYS', 'RHT', 'ULTI']
+
     # Buy logic
     if len(position_list) < 25:
         for stock in interested_assets.index.values:
             # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
-            if stock not in position_list and stock not in stop_list:
+            if stock not in position_list and stock not in stop_list and stock.symbol not in exempt_list:
 
                 # Condition 1
                 # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
@@ -209,7 +212,7 @@ def rebalance(context, data):
                         context.sector_stocks[sector].append(stock)
                     print("Buy order triggered for: {} on {} for {} shares"
                           .format(stock.symbol, data.current_dt.strftime('%d/%m/%Y'), quantity))
-                position_list.append(stock)
+                    position_list.append(stock)
                 if len(position_list) >= 25:
                     break
 
@@ -254,10 +257,12 @@ def core_logic(context, data):
             last_price = data.history(position.asset, 'close', 1, '1d')[0]
         else:
             last_price = position.last_sale_price
-        if last_price == 0:
+        if last_price <= 0:
             raise ValueError("Prices not available")
         net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis) * 100 / position.cost_basis))
         if net_gain_loss < -3:
+            print("{} to be sold. last price = {}, cost basis = {} and net_gain_loss = {}"
+                  .format(str(position.asset.symbol), str(last_price), str(position.cost_basis), str(net_gain_loss)))
             order_target(position.asset, 0)
             strategy.SendMessage('Stop loss Sell Order', 'Sell all shares of {}'.format(str(position.asset.symbol)))
             context.turnover_count += 1
