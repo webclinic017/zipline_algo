@@ -190,7 +190,7 @@ def load_data_table(file,
     # data_table = data_table.set_index(['date', 'ticker'])
     data_table = pd.concat([data_table, etf_data])
     data_table = pd.merge(data_table, data_table_action, how='left', on=['date', 'ticker'])
-    data_table = pd.merge(data_table, data_table_tickers.drop_duplicates(), how='left', on=['ticker'])
+    data_table = pd.merge(data_table, data_table_tickers.drop_duplicates(subset='ticker'), how='left', on=['ticker'])
     data_table.loc[:, ['value']] = data_table.value.fillna(1)
 
     # tickers = data_table_tickers.loc[

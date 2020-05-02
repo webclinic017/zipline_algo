@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # r = requests.get(BASE_URL, allow_redirects=True)
     # open(INPUT_FILE, 'wb').write(r.content)
     metadata_tickers = pd.read_csv(
-        format_metadata_tickers_url('xk5E9bJuWAw5zYjhRH_S')
+        format_metadata_tickers_url('PPzVtduYsyxVgf9z1WGo')
     )
     table_tickers_url = metadata_tickers.loc[0, 'file.link']
     raw_file_tickers = download_without_progress(table_tickers_url)
