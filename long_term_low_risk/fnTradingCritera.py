@@ -37,9 +37,9 @@ def setPandas():
             'max_rows': 20,
             # 'min_rows': 10,
             'precision': 2,
-            'float_format': '{:,.2f}'.format
+            'float_format': '{:,.2f}'.format,
             # 'max_seq_items': 50,         # Max length of printed sequence
-            # 'expand_frame_repr': False,  # Don't wrap to multiple pages
+            'expand_frame_repr': False,  # Don't wrap to multiple pages
             # 'show_dimensions': False
         },
         'mode': {
@@ -57,13 +57,7 @@ def setPandas():
 
 def fnGetSpyReturns():
 
-    # compute 365 days previous returns for SPY (manual start/end date)
-    # start_date = pd.to_datetime('20000103') - pd.to_timedelta(365, unit='d')
-    # end_date = pd.to_datetime('20200103')
-
-    # # Using config start/end date:
-    # start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC') - pd.to_timedelta(365, unit='d')
-    # end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
+    # Using config start/end date:
     start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d') - pd.to_timedelta(365, unit='d')
     end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d')
 
@@ -72,8 +66,14 @@ def fnGetSpyReturns():
     # localize timezones
     panel_data.tz_localize(pytz.utc)
 
-    SPYret = panel_data['Adj Close'].pct_change()
-    return SPYret
+    # calculate returns
+    rSPY = panel_data['Adj Close'].pct_change()[1:]
+
+    # convert SPY index to UTC
+    rSPY.index = rSPY.index.to_datetime().tz_localize('UTC')
+    rSPY = pd.DataFrame(rSPY)
+
+    return rSPY
 
 
 # ------------------------------------------------------------
@@ -81,11 +81,12 @@ def fnGetSpyReturns():
 
 def fnProcessInsiderTrades(dfIT):
 
-    cols = ['ticker', 'filingdate', 'ownername', 'officertitle',
-            'isdirector', 'isofficer', 'istenpercentowner',
+    cols = ['ticker', 'filingdate',
+            # 'ownername', 'officertitle',
+            # 'isdirector', 'isofficer', 'istenpercentowner',
+            # 'securitytitle', 'directorindirect',
             'transactiondate', 'sharesownedbeforetransaction',
-            'transactionshares', 'sharesownedfollowingtransaction',
-            'securitytitle', 'directorindirect',]
+            'transactionshares', 'sharesownedfollowingtransaction']
 
     dfIT = dfIT[cols]
 
@@ -101,8 +102,10 @@ def fnProcessInsiderTrades(dfIT):
     # calculate pct of shares bot/sld
     dfIT['pctSharesBotSld'] = ((dfIT['sharesownedfollowingtransaction'] - dfIT['sharesownedbeforetransaction']) / dfIT['sharesownedbeforetransaction']) * 100
 
-    # if no shares before transaction, replace with shares owned following transaction / 100
-    dfIT['pctSharesBotSld'].replace(np.inf, dfIT['sharesownedfollowingtransaction'] / 100, inplace=True)
+    # if no shares before transaction, remove from data (infinite number because of div 0. Not good data!)
+    dfIT['pctSharesBotSld'].replace(np.inf, np.nan, inplace=True)
+    dfIT.dropna(inplace=True)
+
     dfIT.reset_index(drop=True, inplace=True)
 
     # convert transaction date to datetime and localize timezone
@@ -148,11 +151,11 @@ def fnFilterInsiderTransactions(dfIT, pctTraded = 10.0, side = 'B', tPeriod=7, t
 
     # filtered df (dfStock)
     dfS = df.loc[df['transactiondate'] >= tRange]
-    print('\n Insider Trades filtered on criteria: \n', dfS)
+    # print('\n Insider Trades filtered on criteria: \n', dfS)
 
     # return stock tickers
     tickers = dfS['ticker'].values.tolist()
-    print("\n Tickers to buy: \n", tickers)
+    # print("\n Tickers to buy: \n", tickers)
 
     return tickers
 

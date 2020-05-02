@@ -30,12 +30,6 @@ from long_term_low_risk.fnTradingCritera import setPandas, linreg, \
     fnFilterInsiderTransactions, fnProcessInsiderTrades, fnGetSpyReturns
 
 
-# --------------------------------------------------------------------------------
-from collections import OrderedDict
-from zipline.api import order, record, symbol, set_benchmark
-import zipline
-import matplotlib.pyplot as plt
-
 # ----------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 
@@ -92,23 +86,6 @@ def after_trading_end(context, data):
 
 def analyze(context, data):
     pass
-
-
-# # linear regression to compute alpha and beta
-# def linreg(x, y):
-#     import statsmodels.api as sm
-#     from statsmodels import regression
-#     import math
-#
-#     # We add a constant so that we can also fit an intercept (alpha) to the model
-#     # This just adds a column of 1s to our data
-#     x = sm.add_constant(x)
-#     model = regression.linear_model.OLS(y, x).fit()
-#
-#     # Remove the constant now that we're done
-#     x = x[:, 1]
-#     return model.params[0], model.params[1]
-#
 
 
 def make_pipeline():
@@ -210,6 +187,7 @@ def rebalance(context, data):
 
 
     for stock in interested_assets.index.values:
+
         # calculates the price drop over a given period
         def calc_price_returns(stock=stock, price='price', time_period=30, freq='1d'):
             dfuPrc = data.history(stock, price, time_period, freq)
@@ -220,19 +198,37 @@ def rebalance(context, data):
             pctChg = (uPrc - uPrcPr) / uPrcPr
             return pctChg * 100
 
-
         # calculates historical alpha and beta over the last 252 trading days
-        def calc_alpha_and_beta(stock):
+        def calc_alpha_and_beta(stock, rSPY, tPeriod = 1, tUnit = 'Y'):
 
-            rStk = data.history(stock, 'price', 253, '1d').pct_change()[1:]
+            # units in years
+            if tUnit == 'Y':
+                daysPerUnit = 252
+                trdDays = int(round(tPeriod * daysPerUnit))
+
+            # units in months
+            elif tUnit == 'M':
+                daysPerUnit = 252 / 12
+                trdDays = int(round(tPeriod * daysPerUnit))
+
+            # units in weeks
+            elif tUnit == 'W':
+                daysPerUnit = 252 / 52
+                trdDays = int(round(tPeriod * daysPerUnit))
+
+            # units in days
+            elif tUnit == 'D':
+                daysPerUnit = 252 / 252
+                trdDays = int(round(tPeriod * daysPerUnit))
+
+            else:
+                logger.info('\t WARNING: Invalid time unit: %s' % tUnit)
+
+            # pull stock returns
+            rStk = data.history(stock, 'price', trdDays, '1d').pct_change()[1:]
             rStk = pd.DataFrame(rStk)
 
-            rSPY = fnGetSpyReturns()[1:]
-
-            # convert SPY index to UTC and merge with rStk on datetime
-            rSPY.index = rSPY.index.to_datetime().tz_localize('UTC')
-            rSPY = pd.DataFrame(rSPY)
-
+            #  merge SPYret with rStk on datetime
             df = pd.merge(rStk, rSPY, how="left", left_index=True, right_index=True)
             df.columns = ['Stock Return', 'SPY Return']
 
@@ -240,8 +236,8 @@ def rebalance(context, data):
             Y = df['Stock Return'].values
 
             historical_alpha, historical_beta = linreg(X, Y)
-
             return historical_alpha, historical_beta
+
 
 
     # Buy logic
@@ -273,25 +269,15 @@ def rebalance(context, data):
                 #     continue
 
 
-                # Condition 3: Price Drops larger than -10%
-                if calc_price_returns(time_period = 7) <= -10.0:  # pct
+                # Condition 3 & 4: Price Drops larger than -10% | Price Returns > 5%
+                if (calc_price_returns(time_period = 7) <= -10.0) | (calc_price_returns(time_period = 7) >= 5.0):  # pct
                     continue
-
-                # Condition 4: Price Returns > 5%
-                if calc_price_returns(time_period = 7) >= 5.0:  # pct
-                    continue
-
 
                 # Condition 5: Historical Alpha / Beta
-                alpha, beta = calc_alpha_and_beta(stock)     # lookback period: 252 days
-
-                if alpha >= 0.0:
-                    continue
-                if beta >= 0.25:
+                alpha, beta = calc_alpha_and_beta(stock, rSPY=SPYret, tPeriod=1, tUnit='Y')
+                if (alpha >= -0.000001) & (beta >= 0.50):        # using both parameters at the same time
                     continue
 
-                # if (alpha >= -0.0001) & (beta >= 0.5):        # using both parameters at the same time
-                #     continue
 
 
                 sector = interested_assets.loc[stock].sector
@@ -321,43 +307,6 @@ def handle_data(context, data):
             context.logic_run_done = True
         except ValueError as e:
             print(e)
-
-
-# ----------------------------------------------------------------------------------
-# ----------------------------------------------------------------------------------
-# get SPY returns manually
-
-# def get_spy_returns():
-#
-#     # compute 365 days previous returns for SPY (manual start/end date)
-#     # start_date = pd.to_datetime('20000103') - pd.to_timedelta(365, unit='d')
-#     # end_date = pd.to_datetime('20200103')
-#
-#     # # Using config start/end date:
-#     # start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC') - pd.to_timedelta(365, unit='d')
-#     # end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
-#     start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d') - pd.to_timedelta(365, unit='d')
-#     end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d')
-#
-#     panel_data = pdd.DataReader('SPY', 'yahoo', start_date, end_date)
-#
-#     # localize timezones
-#     panel_data.tz_localize(pytz.utc)
-#
-#     SPYret = panel_data['Adj Close'].pct_change()
-#     return SPYret
-
-
-# for ticker in tickers:
-#     data[ticker] = get_spy_returns()
-#     # data[ticker] = data[ticker][["open","high","low","close","volume"]]
-# panel = pd.Panel(data)
-# panel.minor_axis = ["open","high","low","close","volume", "Adj Close"]
-
-# # localize timezones
-# panel.major_axis = panel.major_axis.tz_localize(pytz.utc)
-
-# ----------------------------------------------------------------------------------
 
 
 def core_logic(context, data):
@@ -454,7 +403,12 @@ def get_dma_returns(context, period, dma_end_date):
 
 
 
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# run main
+
 if __name__ == '__main__':
+
     # set pandas settings
     setPandas()
 
@@ -482,6 +436,8 @@ if __name__ == '__main__':
               'algo_id': config.get('id'),
               'benchmark_symbol': config.get('benchmark_symbol')}
 
+    # get SPY returns for the backtest period
+    SPYret = fnGetSpyReturns()
 
     if args.live_mode == 'True':
         if os.path.exists('test.state'):
