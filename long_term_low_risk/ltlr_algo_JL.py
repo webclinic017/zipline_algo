@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import pandas_datareader.data as pdd
 from strategy import Strategy
-from alphacompiler.data.sf1_fundamentals import Fundamentals
+from alphacompiler.data.sf1_fundamentals import Fundamentals, TransactionData
 from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
 from zipline.utils.events import date_rules
@@ -90,6 +90,7 @@ def analyze(context, data):
 
 def make_pipeline():
     fd = Fundamentals()
+    td = TransactionData()
     sectors = NASDAQSectorCodes()
     ipos = NASDAQIPO()
 
@@ -105,7 +106,10 @@ def make_pipeline():
             'ipoyear': ipos,
             'yoy_sales': fd.yoy_sales,
             'qoq_earnings': fd.qoq_earnings,
-            'sector': sectors
+            'sector': sectors,
+            'sharesownedfollowingtransaction': td.sharesownedfollowingtransaction,
+            'sharesownedbeforetransaction': td.sharesownedbeforetransaction,
+            'transactionshares': td.transactionshares
         },
     )
 

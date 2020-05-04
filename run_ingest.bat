@@ -13,6 +13,8 @@ CALL %anaconda%\Scripts\deactivate.bat
 
 python alpha-compiler-master\alphacompiler\data\load_quandl_sf1.py
 
+python alpha-compiler-master\alphacompiler\data\load_quandl_sf2.py
+
 python alpha-compiler-master\alphacompiler\data\NASDAQ.py
 
 python alpha-compiler-master\alphacompiler\data\NASDAQ_sector_code_loader.py

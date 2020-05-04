@@ -3,7 +3,6 @@ from alphacompiler.util.sparse_data import SparseDataFactor
 from alphacompiler.util.zipline_data_tools import get_ticker_sid_dict_from_bundle
 import os
 from pathlib import Path
-# TODO: this should be deleted and only included as an example
 # this code should go with your application code.
 
 
@@ -31,3 +30,12 @@ class Fundamentals(SparseDataFactor):
         super(Fundamentals, self).__init__(*args, **kwargs)
         self.N = len(get_ticker_sid_dict_from_bundle("quandl")) + 1  # max(sid)+1 get this from the bundle
         self.data_path = os.path.join(str(Path.home()), "SF1.npy")
+
+
+class TransactionData(SparseDataFactor):
+    outputs = ['sharesownedbeforetransaction', 'transactionshares', 'sharesownedfollowingtransaction']
+
+    def __init__(self, *args, **kwargs):
+        super(TransactionData, self).__init__(*args, **kwargs)
+        self.N = len(get_ticker_sid_dict_from_bundle("quandl")) + 1  # max(sid)+1 get this from the bundle
+        self.data_path = os.path.join(str(Path.home()), "SF2.npy")
