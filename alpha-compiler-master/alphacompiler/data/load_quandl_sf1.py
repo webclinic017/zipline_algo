@@ -15,6 +15,7 @@ from os import listdir
 import os
 from pathlib import Path
 import shutil
+import time
 
 BASE = str(Path.home())
 DS_NAME = 'SHARADAR/SF1'   # quandl DataSet code
@@ -46,6 +47,7 @@ def populate_raw_data(tickers, fields, raw_path):
         # if "%d.csv" % sid in existing:
         #     continue
         try:
+            time.sleep(0.1)
             query_str = "%s %s" % (DS_NAME, ticker)
             print("fetching data for: {}".format(query_str))
 
