@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 stop_loss_prevention_days = 15
 
 # max exposure per sector set to 15%
-max_sector_exposure = 0.25
+max_sector_exposure = 0.21
 
 logger = setup_logging("hybrid_algo")
 
@@ -158,18 +158,8 @@ def rebalance(context, data):
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    interested_assets = interested_assets.query("netinc >= 100000000"
-                                                "and netinc <= 1000000000"
-                                                "and receivables >= 10000000"
-                                                "and receivables <= 2000000000"
-                                                "and rnd >= 200000000"
-                                                "and rnd <= 2000000000"
-                                                "and assets >= 1000000000"
-                                                "and assets <= 10000000000"
-                                                "and liabilities <= 20000000000"
-                                                "and revenue >= 2000000000"
-                                                "and fcf >= 250000000"
-
+    interested_assets = interested_assets.query("marketcap >= 10000000000 "
+                                                "and (ipoyear < {} or ipoyear == -30)"
 
                                                 .format(data.current_dt.year - 2))
 

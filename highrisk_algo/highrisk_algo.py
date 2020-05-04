@@ -158,18 +158,12 @@ def rebalance(context, data):
 
     interested_assets = pipeline_data.dropna(subset=['marketcap'])
 
-    interested_assets = interested_assets.query("netinc >= 100000000"
-                                                "and netinc <= 1000000000"
-                                                "and receivables >= 10000000"
-                                                "and receivables <= 2000000000"
-                                                "and rnd >= 200000000"
-                                                "and rnd <= 2000000000"
-                                                "and assets >= 1000000000"
-                                                "and assets <= 10000000000"
-                                                "and liabilities <= 20000000000"
-                                                "and revenue >= 2000000000"
-                                                "and fcf >= 250000000"
-
+    interested_assets = interested_assets.query("marketcap > 5000000000 "
+                                                "and marketcap < 15000000000"
+                                                "and liabilities < 15000000000 "
+                                                "and (yoy_sales >= 0.40 or yoy_sales != yoy_sales)"
+                                                "and fcf >= 100000000"
+                                                "and fcf <= 500000000"
 
                                                 .format(data.current_dt.year - 2))
 
