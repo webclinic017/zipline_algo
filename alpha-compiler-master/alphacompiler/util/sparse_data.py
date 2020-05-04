@@ -146,3 +146,50 @@ def pack_sparse_data(N, rawpath, fields, filename):
             data[field][i, :ind_len] = df[field]
 
     data.dump(filename)  # can be read back with np.load()
+
+
+def pack_sparse_data_for_sf2(N, rawpath, fields, filename):
+    """pack data into np.recarray and persists it to a file to be
+    used by SparseDataFactor"""
+
+    # create buffer to hold data for all tickers
+    dfs = [None] * N
+    max_len = -1
+    for fn in listdir(rawpath):
+        if not fn.endswith(".csv"):
+            continue
+        df = pd.read_csv(os.path.join(rawpath,fn), index_col="Date", parse_dates=True)
+        df = df.sort_index()
+        sid = int(fn.split('.')[0])
+        dfs[sid] = df
+
+        # width is max number of rows in any file
+        max_len = max(max_len, df.shape[0])
+
+    # TODO: temp workaround for `Array Index Out of Bound` bug
+    max_len = max_len + 1
+
+    # pack up data as buffer
+    num_fundamentals = len(fields)
+    buff = np.full((num_fundamentals + 1, N, max_len), np.nan)
+
+    dtypes = [('date', '<f8')]
+    for field in fields:
+        if field=='filingdate':
+            dtypes.append((field, '<S8'))
+        else:
+            dtypes.append((field, '<f8'))
+
+    # pack self.data as np.recarray
+    data = np.recarray(shape=(N, max_len), buf=buff, dtype=dtypes)
+
+    # iterate over loaded data and populate self.data
+    for i, df in enumerate(dfs):
+        if df is None:
+            continue
+        ind_len = df.index.shape[0]
+        data.date[i, :ind_len] = df.index
+        for field in fields:
+            data[field][i, :ind_len] = df[field]
+
+    data.dump(filename)  # can be read back with np.load()
