@@ -6,5 +6,6 @@ config = {
     'capital_base': 100000,
     'benchmark_symbol': 'SPY',
     'name': 'virtual_broker_sample',
-    'id': 5
+    'id': 5,
+    'commission': 0
 }

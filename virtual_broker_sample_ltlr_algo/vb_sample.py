@@ -10,7 +10,8 @@ from alphacompiler.data.NASDAQ import NASDAQSectorCodes, NASDAQIPO
 from zipline.pipeline import Pipeline
 import numpy as np
 from zipline.utils.events import date_rules
-from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function)
+from zipline.api import (attach_pipeline, pipeline_output, schedule_function)
+from utils.virtual_broker import (order_target_percent, order_target)
 from utils.log_utils import setup_logging
 from long_term_low_risk.ltlr_config import config
 import argparse
