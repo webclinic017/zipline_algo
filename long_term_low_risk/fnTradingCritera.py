@@ -77,47 +77,81 @@ def fnGetSpyReturns():
 
 
 # ------------------------------------------------------------
+# commbines all insider trading csv into one dataframe
+
+def fnCombineInsiderTrades(directoryPath):
+    import glob
+
+    glued_data = pd.DataFrame()
+
+    for file_name in glob.glob(directoryPath + '*.csv'):
+        x = pd.read_csv(file_name, low_memory=False)
+        glued_data = pd.concat([glued_data, x], axis=0)
+
+    return glued_data
+
+
+
+# ------------------------------------------------------------
 # data pre-processing for insider trading data
 
-def fnProcessInsiderTrades(dfIT):
+def fnProcessInsiderTrades(df, nDaysDiff):
 
     cols = ['ticker', 'filingdate',
-            # 'ownername', 'officertitle',
-            # 'isdirector', 'isofficer', 'istenpercentowner',
-            # 'securitytitle', 'directorindirect',
             'transactiondate', 'sharesownedbeforetransaction',
             'transactionshares', 'sharesownedfollowingtransaction']
 
-    dfIT = dfIT[cols]
+    df = df[cols]
 
-    # fill NA values with filing date
-    dfIT['transactiondate'].fillna(dfIT['filingdate'], inplace=True)
+    # drop NA transaction dates
+    df['transactiondate'].dropna(inplace=True)
+
+    # drop transactions with < 1 transaction share (otherwise pct bot/sld is something like 0.03%)
+    df = df.loc[abs(df['transactionshares']) > 1]
+
+    # df = df.loc[~df.transactionshares.isna()]
 
     # fill NA sharesownedbeforetransaction with 0
-    dfIT['sharesownedbeforetransaction'].fillna(0, inplace=True)
-
-    # drop NA transactions
-    dfIT = dfIT.loc[~dfIT.transactionshares.isna()]
+    # df['sharesownedbeforetransaction'].fillna(0, inplace=True)
 
     # calculate pct of shares bot/sld
-    dfIT['pctSharesBotSld'] = ((dfIT['sharesownedfollowingtransaction'] - dfIT['sharesownedbeforetransaction']) / dfIT['sharesownedbeforetransaction']) * 100
+    df['pctSharesBotSld'] = ((df['sharesownedfollowingtransaction'] - df['sharesownedbeforetransaction']) / df[
+        'sharesownedbeforetransaction']) * 100
 
     # if no shares before transaction, remove from data (infinite number because of div 0. Not good data!)
-    dfIT['pctSharesBotSld'].replace(np.inf, np.nan, inplace=True)
-    dfIT.dropna(inplace=True)
+    df['pctSharesBotSld'].replace(np.inf, np.nan, inplace=True)
+    df.dropna(inplace=True)
 
-    dfIT.reset_index(drop=True, inplace=True)
+    df.reset_index(drop=True, inplace=True)
 
     # convert transaction date to datetime and localize timezone
-    dfIT['transactiondate'] = pd.to_datetime(dfIT['transactiondate']).dt.tz_localize(pytz.utc)
+    df['transactiondate'] = pd.to_datetime(df['transactiondate'])
+
 
     # check NAs
-    if dfIT.transactiondate.isna().nunique() > 1:
+    if df.transactiondate.isna().nunique() > 1:
         print("----- WARNING: NA VALUES IN TRANSACTION DATE -----")
+    elif df.transactionshares.isna().nunique() > 1:
+        print("----- WARNING: NA VALUES IN TRANSACTION SHARES -----")
     else:
         pass
 
-    return dfIT
+
+    # calculate difference in number of days (filingDate - transactiondate)
+    df['transactiondate'] = pd.to_datetime(df['transactiondate']).dt.tz_localize(pytz.utc)
+    df['filingdate'] = pd.to_datetime(df['filingdate']).dt.tz_localize(pytz.utc)
+
+    df['dDiff'] = (df['filingdate'] - df['transactiondate'])
+    df['dDiffInt'] = df['dDiff'].dt.days
+    df['dDiffInt']= float(df['dDiffInt'])
+
+    # filter out difference in days by nDaysDiff
+    df = df[abs(df['dDiffInt']) <= nDaysDiff]
+
+    # finally, groupby filingdate and sum
+    # df = df.groupby(['ticker', 'filingdate']).sum()
+
+    return df
 
 
 # ------------------------------------------------------------
@@ -181,9 +215,32 @@ def linreg(x, y):
 if __name__ == '__main__':
 
     setPandas()
+
+
+
+    # ----------------------------------------------------------------------------------
+    # analyze insider transaction data
+
+    # directory for the raw insider transaction data files
+    directoryPath = 'C:\\Users\\DEVELOPMENT1\\raw2\\'
+
+    dfRaw = fnCombineInsiderTrades(directoryPath)
+
+
+    dfRaw['transactiondate'] = pd.to_datetime(dfRaw['transactiondate'])
+    dfRaw['filingdate'] = pd.to_datetime(dfRaw['filingdate'])
+    dfRaw['dDiff'] = (dfRaw['filingdate'] - dfRaw['transactiondate'])
+    dfRaw['dDiffInt'] = dfRaw['dDiff'].dt.days
+    tmp = dfRaw.loc[dfRaw['dDiffInt'] >=10]
+    print(tmp[['transactiondate', 'filingdate', 'dDiff']])
+
+
+
+
+
     dfRaw = pd.read_csv('C:\\Users\\DEVELOPMENT1\\Downloads\\SHARADAR-SF2.csv')
 
-    dfIT = fnProcessInsiderTrades(dfRaw)
+    # dfIT = fnProcessInsiderTrades(dfRaw)
 
-    tickers = fnFilterInsiderTransactions(dfIT, pctTraded=10.0, side='B', tPeriod=7, tUnit='d')
+    # tickers = fnFilterInsiderTransactions(dfIT, pctTraded=10.0, side='B', tPeriod=7, tUnit='d')
 
