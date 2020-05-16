@@ -1,3 +1,6 @@
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import PyQt5
+from PyQt5.QtWebEngineWidgets import *
 import os, sys, inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
@@ -6,56 +9,75 @@ sys.path.insert(0, parentdir)
 import pandas as pd
 from strategy import Strategy
 from zipline.utils.events import date_rules, time_rules
-from zipline.api import (order_target_percent, order_target, schedule_function, symbol)
+from zipline.api import order_target, order_target_percent, order_target, schedule_function, symbol, record
 from utils.log_utils import setup_logging
 from beta.beta_config import config
 import argparse
 import os
 import time
-import talib as ta
+from talib import SMA
 
 logger = setup_logging("beta_algo")
 
 
 def initialize(context):
     # attach_pipeline(make_pipeline(), 'my_pipeline')
-    context.turnover_count = 0
-
+    # context.turnover_count = 0
+    # context.invested = False
     # etf stock
     context.shorting_on = True
     context.long_stock = symbol('AAPL')
     context.short_stock = symbol('MSFT')
 
-    if context.live_trading is False:
-        schedule_function(
-            monthly_rebalance,
-            date_rules.month_end(),
-            time_rules.market_close(minutes=45)
-        )
-
-
-def before_trading_start(context, data):
-    # context.pipeline_data = pipeline_output('my_pipeline')
-    if context.live_trading is True:
-        schedule_function(
-            monthly_rebalance,
-            date_rules.month_end(),
-            time_rules.market_close(minutes=45)
-        )
-    context.logic_run_done = False
+    schedule_function(
+        date_rules.month_end(),
+        time_rules.market_close(minutes=45)
+    )
 
 
 
-def after_trading_end(context, data):
-    pass
 
 
-def analyze(context, data):
-    pass
+def handle_data(context, data):
+    t1 = data.history(context.long_stock, 'price', 49, '1d')
+    t2 = data.history(context.long_stock, 'price', 99, '1d')
+    t3 = data.history(context.long_stock, 'price', 149, '1d')
+
+    tPeriodList = [t1, t2, t3]
+    for tPeriod in tPeriodList:
+        if tPeriod.isnull().values.any():
+            return
+
+    shortSMA = SMA(t1.values, timeperiod=49)
+    intermedSMA = SMA(t2.values, timeperiod=99)
+    longSMA = SMA(t3.values, timeperiod=149)
+
+
+    if (short_ema[-1] > long_ema[-1]) and not context.invested:
+        order(context.asset, 100)
+        context.invested = True
+        buy = True
+    elif (short_ema[-1] < long_ema[-1]) and context.invested:
+        order(context.asset, -100)
+        context.invested = False
+        sell = True
+
+
+
+    buy = False
+    sell = False
+
+
+    # Save values for later inspection
+    record(AAPL=data.current(context.long_stock, "price"),
+           shortSMA=shortSMA,
+           intermedSMA=intermedSMA,
+           longSMA=longSMA)
+
 
 
 def fnTripleSMACrossover(context,data):
-    shortSMA=ta.SMA(data.history(context.long_stock,'price',49,freq='1d'))
+    shortSMA = SMA(data.history(context.long_stock,'price',49,freq='1d'))
     # intermediateSMA=
     # longSMA=
 
