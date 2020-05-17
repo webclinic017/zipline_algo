@@ -5,7 +5,7 @@
 # Quandl API key to be set as an ENV variable QUANDL_API_KEY.
 
 import quandl
-from fnTradingCritera import setPandas
+from long_term_low_risk.fnTradingCritera import setPandas
 from alphacompiler.util.zipline_data_tools import get_ticker_sid_dict_from_bundle
 from alphacompiler.util.sparse_data import pack_sparse_data_for_sf2
 from alphacompiler.util import quandl_tools
@@ -38,28 +38,19 @@ FN = "SF2.npy"
 log = Logger('load_quandl_sf2.py')
 
 
-
 # ------------------------------------------------------------
 # data pre-processing for insider trading data
-
 def fnProcessInsiderTrades(df, nDaysDiff):
-
-    cols = ['ticker', 'filingdate',
-            'transactiondate', 'sharesownedbeforetransaction',
-            'transactionshares', 'sharesownedfollowingtransaction']
-
-    df = df[cols]
-
     # drop NA transaction dates
-    df['transactiondate'].dropna(inplace=True)
-
+    df = df[df.transactiondate.notnull()]
+    df = df[df.transactionshares.notnull()]
+    df['transactionshares'].dropna(inplace=True)
     # drop transactions with < 1 transaction share (otherwise pct bot/sld is something like 0.03%)
     df = df.loc[abs(df['transactionshares']) > 1]
 
     # df = df.loc[~df.transactionshares.isna()]
     # fill NA sharesownedbeforetransaction with 0
     # df['sharesownedbeforetransaction'].fillna(0, inplace=True)
-
 
     # calculate pct of shares bot/sld
     df['pctSharesBotSld'] = ((df['sharesownedfollowingtransaction'] - df['sharesownedbeforetransaction']) / df[
@@ -74,7 +65,6 @@ def fnProcessInsiderTrades(df, nDaysDiff):
     # convert transaction date to datetime and localize timezone
     df['transactiondate'] = pd.to_datetime(df['transactiondate'])
 
-
     # check NAs
     if df.transactiondate.isna().nunique() > 1:
         print("----- WARNING: NA VALUES IN TRANSACTION DATE -----")
@@ -83,14 +73,13 @@ def fnProcessInsiderTrades(df, nDaysDiff):
     else:
         pass
 
-
     # calculate difference in number of days (filingDate - transactiondate)
     df['transactiondate'] = pd.to_datetime(df['transactiondate']).dt.tz_localize(pytz.utc)
     df['filingdate'] = pd.to_datetime(df['filingdate']).dt.tz_localize(pytz.utc)
 
     df['dDiff'] = (df['filingdate'] - df['transactiondate'])
     df['dDiffInt'] = df['dDiff'].dt.days
-    df['dDiffInt']= df['dDiffInt'].astype(float)
+    df['dDiffInt'] = df['dDiffInt'].astype(float)
 
     # filter out difference in days by nDaysDiff
     df = df[abs(df['dDiffInt']) <= nDaysDiff]
@@ -101,9 +90,7 @@ def fnProcessInsiderTrades(df, nDaysDiff):
     return df
 
 
-
-
-def populate_raw_data(tickers, fields, raw_path):
+def populate_raw_data(tickers, input_fields, output_fields, raw_path):
     """tickers is a dict with the ticker string as the key and the SID
     as the value.  """
     quandl_tools.set_api_key()
@@ -121,33 +108,19 @@ def populate_raw_data(tickers, fields, raw_path):
             # df = quandl.get_table(query_str, start_date=START_DATE, end_date=END_DATE)
 
             rawData = quandl.get_table(DS_NAME,
-                                    filingdate={'gte': START_DATE, 'lte': END_DATE},
-                                    ticker=ticker,
-                                    qopts={'columns': ['transactiondate'] + fields},
-                                    paginate=True)
+                                       filingdate={'gte': START_DATE, 'lte': END_DATE},
+                                       ticker=ticker,
+                                       qopts={'columns': input_fields},
+                                       paginate=True)
 
             df = fnProcessInsiderTrades(rawData, nDaysDiff=3)
 
-            df = df.groupby('filingdate').sum().reset_index()
+            #  Group by and Change column name to field
+            if not df.empty:
+                df = df.groupby('filingdate').sum().reset_index()
+            df = df.rename(columns={"filingdate": "Date"})
 
-            #  Change column name to field
-            # df = df.rename(columns={"transactiondate": "Date"})
-
-            # fill NA transactiondate with filingdate
-            # df['Date'].fillna(df['filingdate'], inplace=True)
-            # df = df.drop(["filingdate"], axis=1)
-
-            # fill NA sharesownedbeforetransaction with 0
-            # df['sharesownedbeforetransaction'].fillna(0, inplace=True)
-
-            # drop NA transactions
-            # df = df.loc[~df.transactionshares.isna()]
-
-            # group by transaction data, summing up all other values for the same day
-            # df = df.groupby(['Date']).agg({'sharesownedbeforetransaction': "sum",
-            #                                           'transactionshares': "sum",
-            #                                           'sharesownedfollowingtransaction': "sum",
-            #                                'filingdate': 'max'}).reset_index()
+            df = df[output_fields]
 
             # write raw file: raw/
             df = df.rename_axis('None', axis=0)
@@ -156,9 +129,9 @@ def populate_raw_data(tickers, fields, raw_path):
             print("error with ticker: {}".format(ticker))
 
 
-def all_tickers_for_bundle(fields, bundle_name, raw_path=os.path.join(BASE, RAW_FLDR)):
+def all_tickers_for_bundle(input_fields, output_fields, bundle_name, raw_path=os.path.join(BASE, RAW_FLDR)):
     tickers = get_ticker_sid_dict_from_bundle(bundle_name)
-    populate_raw_data(tickers, fields, raw_path)
+    populate_raw_data(tickers, input_fields, output_fields, raw_path)
     return len(tickers)
 
 
@@ -173,17 +146,18 @@ if __name__ == '__main__':
     # process and clean insider transactions data, then filter on (filingdate - transactiondate) nDays <=3
     # df = fnProcessInsiderTrades(rawData, nDaysDiff=3)
 
-
-
     # ---------------------------------------------------------------------------------------
     # ---------------------------------------------------------------------------------------
     # QUANDL LOAD:
-    fields = ['ticker', 'sharesownedbeforetransaction', 'transactionshares', 'sharesownedfollowingtransaction', 'transactiondate','filingdate']
+    input_fields = ['filingdate', 'transactiondate', 'sharesownedbeforetransaction', 'transactionshares',
+                    'sharesownedfollowingtransaction']
+    output_fields = ['Date', 'sharesownedbeforetransaction', 'transactionshares',
+                     'sharesownedfollowingtransaction', 'pctSharesBotSld', 'dDiffInt']
 
-    num_tickers = all_tickers_for_bundle(fields, 'quandl')
+    num_tickers = all_tickers_for_bundle(input_fields, output_fields, 'quandl')
     pack_sparse_data_for_sf2(num_tickers + 1,  # number of tickers in bundle + 1
                     os.path.join(BASE, RAW_FLDR),
-                    fields,
+                    output_fields,
                     os.path.join(BASE, FN))
 
     print("this worked boss")

@@ -107,9 +107,11 @@ def make_pipeline():
             'yoy_sales': fd.yoy_sales,
             'qoq_earnings': fd.qoq_earnings,
             'sector': sectors,
-            'sharesownedfollowingtransaction': td.sharesownedfollowingtransaction,
             'sharesownedbeforetransaction': td.sharesownedbeforetransaction,
-            'transactionshares': td.transactionshares
+            'transactionshares': td.transactionshares,
+            'sharesownedfollowingtransaction': td.sharesownedfollowingtransaction,
+            'pctSharesBotSld': td.pctSharesBotSld,
+            'dDiffInt': td.dDiffInt
         },
     )
 

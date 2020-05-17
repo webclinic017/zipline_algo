@@ -33,7 +33,8 @@ class Fundamentals(SparseDataFactor):
 
 
 class TransactionData(SparseDataFactor):
-    outputs = ['sharesownedbeforetransaction', 'transactionshares', 'sharesownedfollowingtransaction']
+    outputs = ['sharesownedbeforetransaction', 'transactionshares', 'sharesownedfollowingtransaction',
+               'pctSharesBotSld', 'dDiffInt']
 
     def __init__(self, *args, **kwargs):
         super(TransactionData, self).__init__(*args, **kwargs)

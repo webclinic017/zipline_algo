@@ -170,15 +170,13 @@ def pack_sparse_data_for_sf2(N, rawpath, fields, filename):
     max_len = max_len + 1
 
     # pack up data as buffer
+    fields.remove('Date')
     num_fundamentals = len(fields)
     buff = np.full((num_fundamentals + 1, N, max_len), np.nan)
 
     dtypes = [('date', '<f8')]
     for field in fields:
-        if field=='filingdate':
-            dtypes.append((field, '<S8'))
-        else:
-            dtypes.append((field, '<f8'))
+        dtypes.append((field, '<f8'))
 
     # pack self.data as np.recarray
     data = np.recarray(shape=(N, max_len), buf=buff, dtype=dtypes)
