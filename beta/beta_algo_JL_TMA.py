@@ -1,220 +1,493 @@
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-import PyQt5
-from PyQt5.QtWebEngineWidgets import *
-import os, sys, inspect
+# zipline run --bundle custom-csvdir-bundle -s 2007-08-01 -e 2020-05-01 -f C:\Users\jloss\PyCharmProjects\zipline_algo\beta\beta_algo_JL.py
+
+# --------------------------------------------------------------------------------------------------
+# Module Imports
+
+import inspect
+import logging
+import os
+import sys
+import warnings
+from functools import reduce
+from datetime import datetime as dt
+import pandas as pd
+import zipline.finance.cancel_policy
+from talib import SMA, EMA
+from zipline.api import *
+from zipline.utils.events import date_rules, time_rules
+from zipline.finance.cancel_policy import EODCancel
+
+import matplotlib.pyplot as plt
+from matplotlib import style
+style.use('fivethirtyeight')
+
+from beta.beta_config import config
+from fnCommon import setLogging
+from fnTradingCritera import setPandas
+from datetime import timedelta
+import operator
+from functools import partial
+warnings.simplefilter(action='ignore',category = UserWarning)
+
+# quandl_api_key='PPzVtduYsyxVgf9z1WGo'
+
+
+# --------------------------------------------------------------------------------------------------
+# setup logging
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-import pandas as pd
-from strategy import Strategy
-from zipline.utils.events import date_rules, time_rules
-from zipline.api import order_target, order_target_percent, order_target, schedule_function, symbol, record
-from utils.log_utils import setup_logging
-from beta.beta_config import config
-import argparse
-import os
-import time
-from talib import SMA
+LOGGING_DIRECTORY = os.path.join('C:\\', 'Users\\jloss\\PyCharmProjects\\zipline_algo\\beta\\', 'logs\\', dt.today().strftime('%Y-%m-%d'))
 
-logger = setup_logging("beta_algo")
+LOG_FILE_NAME = os.path.basename(__file__) + '.log'
 
+
+# --------------------------------------------------------------------------------------------------
+# todo:
+# liquidate long when shortest MA crosses below intermediate MA or if close < entryPrice - 3000/bigPointValue
+# if ((shortSMA < medSMA) | () )
+# if context.longSpread
+# if context.longSpread:
+# if (shortSMA < medSMA) or (SPY)
+# liguitate short when shortest MA crosses above intermediate MA or if close > entryPrice + 3000/bigPointValue
+
+
+# --------------------------------------------------------------------------------------------------
+# init
 
 def initialize(context):
-    # attach_pipeline(make_pipeline(), 'my_pipeline')
-    # context.turnover_count = 0
-    # context.invested = False
-    # etf stock
-    context.shorting_on = True
-    context.long_stock = symbol('AAPL')
-    context.short_stock = symbol('MSFT')
 
-    schedule_function(
-        date_rules.month_end(),
-        time_rules.market_close(minutes=45)
-    )
+    set_benchmark(symbol("SPY2"))
 
+    set_cancel_policy(EODCancel())
+    # set_max_order_count(1)
 
+    # set_max_leverage(1.0)
 
+    context.longSpread = False
+    context.shortSpread = False
 
+    context.longStock = symbol('SH2')
+    context.shortStock = symbol('SPY2')
+    #
+    # schedule_function(fnTripleMovingAverageCrossover,
+    #                   date_rules.every_day(),
+    #                   time_rules.market_open(minutes = 20))
 
-def handle_data(context, data):
-    t1 = data.history(context.long_stock, 'price', 49, '1d')
-    t2 = data.history(context.long_stock, 'price', 99, '1d')
-    t3 = data.history(context.long_stock, 'price', 149, '1d')
+    schedule_function(handle_data,
+                      date_rules.every_day(),
+                      # time_rules.market_close(minutes = 45))
+                      time_rules.market_open(minutes = 45))
 
-    tPeriodList = [t1, t2, t3]
-    for tPeriod in tPeriodList:
-        if tPeriod.isnull().values.any():
-            return
+    # schedule_function(fnLiquidatePositions,
+    #                   date_rules.every_day())
+    #                   time_rules.market_open(minutes = 1))
 
-    shortSMA = SMA(t1.values, timeperiod=49)
-    intermedSMA = SMA(t2.values, timeperiod=99)
-    longSMA = SMA(t3.values, timeperiod=149)
-
-
-    if (short_ema[-1] > long_ema[-1]) and not context.invested:
-        order(context.asset, 100)
-        context.invested = True
-        buy = True
-    elif (short_ema[-1] < long_ema[-1]) and context.invested:
-        order(context.asset, -100)
-        context.invested = False
-        sell = True
+    schedule_function(recordVars,
+                      date_rules.every_day())
 
 
-
-    buy = False
-    sell = False
-
-
-    # Save values for later inspection
-    record(AAPL=data.current(context.long_stock, "price"),
-           shortSMA=shortSMA,
-           intermedSMA=intermedSMA,
-           longSMA=longSMA)
-
-
-
-def fnTripleSMACrossover(context,data):
-    shortSMA = SMA(data.history(context.long_stock,'price',49,freq='1d'))
-    # intermediateSMA=
-    # longSMA=
-
-    # todo: BUY
-    # short + intermediate > long
-    # Buy when shortest MA crosses above intermedia
-
-    # todo: Sell Short
-    # short + intermediate < Long
-    # sell when shortest MA crosses below intermediate MA
-
-    # todo:
-    # liguitate long when shortest MA crosses below intermediate MA or if close < entryPrice - 3000/bigPointValue
-    # liguitate short when shortest MA crosses above intermediate MA or if close > entryPrice + 3000/bigPointValue
-
-    pass
-
-
-def monthly_rebalance(context, data):
-    print("-----Monthly Rebalance method Called-------")
-    if len(context.portfolio.positions.values()) == 0:
-        benchmark_dma = get_dma_returns(context, 200, data.current_dt)
-        if benchmark_dma < 0:
-            go_inverse(context)
-        elif benchmark_dma >= 0:
-            go_straight(context)
-
-
-def rebalance(context, data):
-    print("-----Rebalance method Called-------")
-    benchmark_dma = get_dma_returns(context, 200, data.current_dt)
-    if benchmark_dma < 0 and not context.shorting_on:
-        go_inverse(context)
-    elif benchmark_dma >= 0 and context.shorting_on:
-        go_straight(context)
-
-
-def go_inverse(context):
-    context.shorting_on = True
-    order_target_percent(context.long_stock, 0)
-    order_target_percent(context.short_stock, 1)
-
-
-def go_straight(context):
-    context.shorting_on = False
-    order_target_percent(context.short_stock, 0)
-    order_target_percent(context.long_stock, 1)
-
+# --------------------------------------------------------------------------------------------------
+# handle data
 
 def handle_data(context, data):
+
+    SH = context.longStock
+    SPY = context.shortStock
+
+    pos = context.portfolio.positions
+
+    openOrders = get_open_orders()
+
+    tPeriod = data.history(SPY, 'close', 310, '1d')
+
+    # try EMA as well
+    context.shortSMA = SMA(tPeriod.values, timeperiod = 49)     # 49
+    context.medSMA = SMA(tPeriod.values, timeperiod = 194)      # 99
+    context.longSMA = SMA(tPeriod.values, timeperiod = 309)     # 149
+
+    shortSMA = round(context.shortSMA[-1], 2)
+    medSMA = round(context.medSMA[-1], 2)
+    longSMA = round(context.longSMA[-1], 2)
+
+    currentPosition = context.portfolio.positions
+
     try:
-        if context.logic_run_done is False:
-            rebalance(context, data)
-            context.logic_run_done = True
-        stop_loss_check(context, data)
-    except ValueError as e:
-        print(e)
+        if len(currentPosition) > 0:
+
+            # bigPointValue = pointValue x priceScale (default = 50 for SPY)
+            bigPointValue = 50.0  # 250
+
+            # if (context.longSpread or context.shortSpread):
+            if context.longSpread:
+                lastClose = data.current(SPY, 'close')
+
+                entryPrice = context.portfolio.positions[1].cost_basis
+                bpv =  3000 / bigPointValue
+
+                # pos=context.metrics_tracker.positions
+                # entryPrice = pos[1].inner_position.cost_basis
 
 
-def stop_loss_check(context, data):
-    if context.live_trading is True:
-        for symbol, position in context.portfolio.positions.items():
-            data.current(symbol, 'price')
-        time.sleep(60)
+                if (shortSMA < medSMA) | (lastClose < (entryPrice - bpv)):
+                    logging.info('----- CLOSING LONG POSITION -----')
+                    order_target_percent(SH, 0.0)
 
-    positions = list(context.portfolio.positions.values())
-    position_list = []
+                    context.longSpread = False
+                    # context.shortSpread = False
 
-    for position in positions:
-        position_list.append(position.asset)
-        if not position.amount > 0:
-            continue
-        if position.last_sale_price == 0:
-            last_price = data.history(position.asset, 'close', 1, '1d')[0]
+            elif context.shortSpread:
+                lastClose = data.current(SPY, 'close')
+                entryPrice = context.portfolio.positions[0].cost_basis
+                bpv =  3000/250
+
+                # pos=context.metrics_tracker.positions
+                # entryPrice = pos[0].inner_position.cost_basis
+
+                if (shortSMA > medSMA) | (lastClose > (entryPrice + bpv)):
+                    logging.info('----- CLOSING SHORT POSITION -----')
+                    order_target_percent(SPY, 0.0)
+
+                    context.shortSpread = False
+                    # context.longSpread = False
+
         else:
-            last_price = position.last_sale_price
-
-        prev_price = data.history(position.asset, 'close', 2, '1d')[0]
-        if last_price <= 0 or prev_price <= 0:
-            raise ValueError("Prices not available")
-        daily_gain_loss = float("{0:.2f}".format((last_price - prev_price) * 100 / prev_price))
-        net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis) * 100 / position.cost_basis))
-
-        if net_gain_loss < -3 or daily_gain_loss < -3:
-            order_target(position.asset, 0)
-            strategy.SendMessage('Stop loss Sell Order', 'Sell all shares of {}'.format(str(position.asset.symbol)))
-            try:
-                print("Stop loss triggered for: {} on {}".format(position.asset.symbol,
-                                                                 data.current_dt.strftime('%d/%m/%Y')))
-            except Exception as e:
-                print(e)
-
-    print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
+            fnTripleMovingAverageCrossover(context, data)
 
 
-def get_dma_returns(context, period, dma_end_date):
-    returns = context.trading_environment.benchmark_returns[:dma_end_date]
-    if returns.size > period:
-        returns = 1 + returns[-period:]
+    except Exception as e:
+        logging.error(str(e))
+
+
+# --------------------------------------------------------------------------------------------------
+# TMA strategy
+
+def fnTripleMovingAverageCrossover(context, data):
+
+    SH = context.longStock
+    SPY = context.shortStock
+
+    pos = context.portfolio.positions
+
+
+    tPeriod = data.history(SPY, 'close', 310, '1d')
+
+    # try EMA as well
+    context.shortSMA = SMA(tPeriod.values, timeperiod = 49)     # 49
+    context.medSMA = SMA(tPeriod.values, timeperiod = 194)      # 99
+    context.longSMA = SMA(tPeriod.values, timeperiod = 309)     # 149
+
+    shortSMA = round(context.shortSMA[-1], 2)
+    medSMA = round(context.medSMA[-1], 2)
+    longSMA = round(context.longSMA[-1], 2)
+
+
+    # short & intermediate each must be greater > long
+    if (shortSMA > longSMA) & (medSMA > longSMA):
+        logging.info('ma49: %s and ma194: %s are higher than ma309: %s' % (shortSMA, medSMA, longSMA))
+        logging.info('\tlooking to enter long position...')
+
+        # Buy when shortest MA crosses above intermed
+        if (shortSMA > medSMA) & (context.longSpread == False):
+            logging.info('ma49: %s crossed above ma194: %s' % (shortSMA, medSMA))
+            logging.info('----- LONG ORDER PLACED -----')
+
+            order_target_percent(SH, -1.0)
+            # order_target_percent(SPY, 0.0)
+
+            openOrders = get_open_orders()
+
+            if len(openOrders) > 0:
+                logging.info('waiting to fill order...')
+
+            # newOrders = context.blotter.new_orders[0]
+            # logging.info("Ticker: %s, nShares: %s" % (newOrders.sid, newOrders.amount))
+            # update if order is filled
+
+            # while not context.portfolio.positions:
+            #     logging.info('waiting for position update...')
+            #     continue
+
+            # elif len(context.portfolio.positions) > 0:
+            # else:
+            context.longSpread = True
+            context.shortSpread = False
+
+
+    # short + intermediate < Long
+    elif (shortSMA < longSMA) & (medSMA < longSMA):
+        logging.info("ma49: %s and ma194: %s are lower than ma309: %s" % (shortSMA, medSMA, longSMA))
+
+        logging.info('\tlooking to enter short position....')
+
+        # sell when shortest MA crosses below intermediate MA
+        if (shortSMA < medSMA) & (context.shortSpread==False):
+            logging.info('ma49: %s crossed below ma194: %s' %(shortSMA, medSMA))
+            logging.info('----- SHORT ORDER PLACED -----')
+
+            order_target_percent(SPY, -1.0)
+            # order_target_percent(SH, 0.0)
+
+
+            openOrders = get_open_orders()
+
+            if len(openOrders) > 0:
+                logging.info('waiting to fill order...')
+
+
+            # elif len(context.portfolio.positions) > 0:
+            # else:
+            context.shortSpread = True
+            context.longSpread = False
+
+            # newOrders = context.blotter.new_orders[0]
+            # logging.info("Ticker: %s, nShares: %s" % (newOrders.sid, newOrders.amount))
+
+            # todo:
+            # order placement SAME DAY as signal
+
+            # if context.portfolio.positions:
+
+            # if not context.blotter.open_orders:
+
     else:
-        return 0
-    dma_return = 100 * (returns.prod() - 1)
-    return dma_return
+        pass
 
+            # record(pos)
+
+        # if context.longSpread | context.shortSpread:
+        #     fnLiquidatePositions(context,data)
+
+
+
+# --------------------------------------------------------------------------------------------------
+# record variables
+
+def recordVars(context, data):
+    SH = context.longStock
+    SPY = context.shortStock
+
+    shortSMA = context.shortSMA[-1]
+    medSMA = context.medSMA[-1]
+    longSMA = context.longSMA[-1]
+
+    pos = context.metrics_tracker.positions
+    port = context.metrics_tracker.portfolio
+    pnl = context.metrics_tracker.portfolio.pnl
+    returns = context.metrics_tracker.portfolio.returns
+
+    # context.metrics_tracker.portfolio.current_portfolio_weights
+    # context.metrics_tracker.portfolio.positions_exposure
+
+    record(shortSMA = shortSMA,
+           medSMA = medSMA,
+           longSMA = longSMA,
+           SPY = data.current(SPY, 'close'),
+           SH = data.current(SH, 'close'),
+           posMetrics = pos,
+           portMetrics = port,
+           pnlMetrics = pnl,
+           pnlRtn = returns,
+           # positions = context.portfolio.positions,
+           # portval = context.portfolio.portfolio_value,
+           # pnl = context.portfolio.pnl,
+           # rtn = context.portfolio.returns,
+           )
+
+    # print(shortSMA[-1], medSMA[-1], longSMA[-1], SPY, SH, context.portfolio.pnl, context.portfolio.positions)
+
+
+# --------------------------------------------------------------------------------------------------
+# analyze
+
+def analyze(context, perf):
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    # ax2 = fig.add_subplot(111)
+
+    ax.plot(perf.portfolio_value,
+            # c='b',
+            label='portfolio_value',
+            linewidth=2.5)
+
+    ax.plot(perf.ending_cash,
+            # c='r',
+            label='ending_cash',
+            linewidth=1.0)
+
+    # perf.portfolio_value.plot(ax=ax)
+    # perf.ending_cash.plot(ax=ax2)
+    # ax1.set_ylabel('portfolio $ value')
+    # ax2.set_ylabel('ending cash')
+
+    plt.legend(loc=0, fontsize='small')
+
+    plt.show()
+
+
+
+# --------------------------------------------------------------------------------------------------
+#
+# def fnLiquidatePositions(context, data):
+    # SPY = context.longStock
+    # SH = context.shortStock
+    #
+    # shortSMA = context.shortSMA[-1]
+    # medSMA = context.medSMA[-1]
+    # longSMA = context.longSMA[-1]
+    #
+    # # bigPointValue = pointValue x priceScale (default = 50 for SPY)
+    # bigPointValue = 50.0  # 250
+    #
+    # # if (context.longSpread or context.shortSpread):
+    # if context.longSpread:
+    #     lastClose = data.current(SPY,'close')
+    #     entryPrice = context.portfolio.positions[1].cost_basis
+    #     bpv =  3000 / bigPointValue
+    #
+    #     # pos=context.metrics_tracker.positions
+    #     # entryPrice = pos[1].inner_position.cost_basis
+    #
+    #
+    #     if (shortSMA < medSMA) | (lastClose < (entryPrice-bpv)):
+    #         logging.info('----- CLOSING LONG POSITION -----')
+    #         order_target_percent(SH, 0.0)
+    #
+    #         context.longSpread = False
+    #         # context.shortSpread = False
+    #
+    # if context.shortSpread:
+    #     lastClose = data.current(SPY,'close')
+    #     entryPrice = context.portfolio.positions[0].cost_basis
+    #     bpv =  3000/250
+    #
+    #     # pos=context.metrics_tracker.positions
+    #     # entryPrice = pos[0].inner_position.cost_basis
+    #
+    #     if (shortSMA > medSMA) | (lastClose > (entryPrice+bpv)):
+    #         logging.info('----- CLOSING SHORT POSITION -----')
+    #         order_target_percent(SPY, 0.0)
+    #
+    #         context.shortSpread = False
+    #         # context.longSpread = False
+
+
+
+
+
+# def stop_loss_check(context, data):
+#     for symbol, position in context.portfolio.positions.items():
+#         data.current(symbol, 'price')
+#     time.sleep(60)
+#
+#     positions = list(context.portfolio.positions.values())
+#     position_list = []
+#
+#     for position in positions:
+#         position_list.append(position.asset)
+#         if not position.amount > 0:
+#             continue
+#         if position.last_sale_price == 0:
+#             last_price = data.history(position.asset, 'close', 1, '1d')[0]
+#         else:
+#             last_price = position.last_sale_price
+#
+#         prev_price = data.history(position.asset, 'close', 2, '1d')[0]
+#         if last_price <= 0 or prev_price <= 0:
+#             raise ValueError("Prices not available")
+#         daily_gain_loss = float("{0:.2f}".format((last_price - prev_price) * 100 / prev_price))
+#         net_gain_loss = float("{0:.2f}".format((last_price - position.cost_basis) * 100 / position.cost_basis))
+#
+#         if net_gain_loss < -3 or daily_gain_loss < -3:
+#             order_target(position.asset, 0)
+#             try:
+#                 print("Stop loss triggered for: {} on {}".format(position.asset.symbol,
+#                                                                  data.current_dt.strftime('%d/%m/%Y')))
+#             except Exception as e:
+#                 print(e)
+#
+#     print("Daily handle data processed for {}".format(data.current_dt.strftime('%d/%m/%Y')))
+
+
+# --------------------------------------------------------------------------------------------------
+# register csv
+
+# import pandas as pd
+# from zipline.data.bundles import register
+# from zipline.data.bundles.csvdir import csvdir_equities
+# start_session = pd.Timestamp('2007-8-1', tz='utc')
+# end_session = pd.Timestamp('2020-5-1', tz='utc')
+# register(
+#     'custom-csvdir-bundle',
+#     csvdir_equities(
+#         ['daily'],
+#         'C:/Users/jloss/PyCharmProjects/zipline_algo/beta/data',
+#     ),
+#     calendar_name='NYSE', # US equities
+#     start_session=start_session,
+#     end_session=end_session
+# )
+# zipline.data.bundles.ingest('custom-csvdir-bundle')
+# zipline.data.bundles.ingestions_for_bundle('custom-csvdir-bundle')
+# import zipline
+# zipline.bundles
+# from zipline.data.bundles import ingest, csvdir
+# import zipline.data.bundles as zdb
+# zdb.bundles
+
+
+
+# --------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
+# run main
 
 if __name__ == '__main__':
-    start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
-    end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
-    parser = argparse.ArgumentParser(description='live mode.')
-    parser.add_argument('--live_mode', help='True for live mode')
-    args = parser.parse_args()
+    setPandas()
+    setLogging(LOGGING_DIRECTORY, LOG_FILE_NAME, level='INFO')
 
-    kwargs = {'start': start_date,
-              'end': end_date,
-              'initialize': initialize,
-              'handle_data': handle_data,
-              'analyze': analyze,
-              'before_trading_start': before_trading_start,
-              'after_trading_end': after_trading_end,
-              'bundle': 'quandl',
-              'capital_base': config.get('capital_base'),
-              'algo_name': config.get('name'),
-              'algo_id': config.get('id'),
-              'benchmark_symbol': config.get('benchmark_symbol')}
+    start_date = pd.to_datetime(config.get('start_date'), format = '%Y%m%d').tz_localize('UTC')
+    end_date = pd.to_datetime(config.get('end_date'), format = '%Y%m%d').tz_localize('UTC')
 
-    if args.live_mode == 'True':
-        if os.path.exists('test.state'):
-            os.remove('test.state')
-        print("Running in live mode.")
-        kwargs['tws_uri'] = 'localhost:7497:1232'
-        kwargs['live_trading'] = True
-    else:
-        kwargs['live_trading'] = False
 
-    strategy = Strategy(kwargs)
-    strategy.run_algorithm()
+    try:
+        perf = zipline.run_algorithm(start = start_date,
+                                     end = end_date,
+                                     initialize = initialize,
+                                     analyze = analyze,
+                                     capital_base = config.get('capital_base'),
+                                     handle_data = handle_data,
+                                     bundle = 'custom-csvdir-bundle',
+                                     # bundle = 'quandl',
+                                     # metrics_set = 'default',
+                                     # blotter = zipline.finance.blotter.SimulationBlotter(cancel_policy = EODCancel)
+                                     )
 
-    if args.live_mode != 'True':
-        input("Press any key to exit")
+        perf.to_csv('perf.csv')
+
+
+
+
+        # --------------------------------------------------------------------------------------------------
+        # end program
+
+        logging.info("========== END PROGRAM ==========")
+        logging.info('\nEnding portfolio statistics:\n%s' % perf.loc[perf.index[-1]])
+        logging.info('\nLarge negative returns:\n%s' % perf.loc[perf.returns<-.10]['returns'])
+
+
+
+
+
+    except Exception as e:
+        logging.error(str(e), exc_info = True)
+
+# CLOSE LOGGING
+for handler in logging.root.handlers:
+    handler.close()
+
+logging.shutdown()
