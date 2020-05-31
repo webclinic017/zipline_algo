@@ -11,11 +11,11 @@ from zipline.pipeline import Pipeline
 import numpy as np
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, pipeline_output, schedule_function)
-from utils.virtual_broker import (order_target_percent, order_target)
+from utils.api_connector import (order_target_percent, order_target)
 from utils.log_utils import setup_logging
-from long_term_low_risk.ltlr_config import config
+from utils.algo_utils import get_run_mode
+from virtual_broker_sample_ltlr_algo.vb_sample_config import config
 import argparse
-import os
 import pickle
 import time
 
@@ -31,6 +31,7 @@ logger = setup_logging("virtual_broker_sample")
 
 def initialize(context):
     attach_pipeline(make_pipeline(), 'my_pipeline')
+    # context.broker = BacktestBroker()
     context.stop_loss_list = pd.Series()
     context.sector_wise_exposure = dict()
     context.sector_stocks = {}
@@ -44,6 +45,7 @@ def initialize(context):
 
 
 def before_trading_start(context, data):
+    # cash = context.broker.get_cash(context)
     context.pipeline_data = pipeline_output('my_pipeline')
     if context.live_trading is True:
         try:
@@ -332,30 +334,18 @@ if __name__ == '__main__':
     end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
     parser = argparse.ArgumentParser(description='live mode.')
-    parser.add_argument('--live_mode', help='True for live mode')
+    parser.add_argument('--live_mode', help='True for live mode', default='backtest')
     args = parser.parse_args()
 
-    kwargs = {'start': start_date,
-              'end': end_date,
-              'initialize': initialize,
-              'handle_data': handle_data,
-              'analyze': analyze,
-              'before_trading_start': before_trading_start,
-              'after_trading_end': after_trading_end,
-              'bundle': 'quandl',
-              'capital_base': config.get('capital_base'),
-              'algo_name': config.get('name'),
-              'algo_id': config.get('id'),
-              'benchmark_symbol': config.get('benchmark_symbol')}
+    kwargs = {'start': start_date, 'end': end_date, 'initialize': initialize, 'handle_data': handle_data,
+              'analyze': analyze, 'before_trading_start': before_trading_start, 'after_trading_end': after_trading_end,
+              'bundle': 'quandl', 'capital_base': config.get('capital_base'), 'algo_name': config.get('name'),
+              'algo_id': config.get('id'), 'benchmark_symbol': config.get('benchmark_symbol'),
+              'tws_uri': get_run_mode(args.live_mode)[0], 'live_trading': get_run_mode(args.live_mode)[1]}
 
-    if args.live_mode == 'True':
+    if args.live_mode == 'live':
         if os.path.exists('test.state'):
             os.remove('test.state')
-        print("Running in live mode.")
-        kwargs['tws_uri'] = 'localhost:7497:1232'
-        kwargs['live_trading'] = True
-    else:
-        kwargs['live_trading'] = False
 
     strategy = Strategy(kwargs)
     strategy.run_algorithm()

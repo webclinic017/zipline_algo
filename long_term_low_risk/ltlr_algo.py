@@ -152,7 +152,7 @@ def rebalance(context, data):
 
     net = context.portfolio.portfolio_value
     for position in context.portfolio.positions.values():
-        if position.last_sale_price == 0:
+        if position.last_sale_price == 0 or position.last_sale_price is None:
             last_price = data.history(position.asset, 'close', 1, '1d')[0]
         else:
             last_price = position.last_sale_price
@@ -168,18 +168,14 @@ def rebalance(context, data):
     for position in positions:
         position_list.append(position.asset)
 
-    exempt_list = ['MELI', 'GENZ', 'FRX', 'HSP', 'AGN1', 'BXLT', 'MEDI', 'ETEK1', 'DNA', 'PNU', 'SDS1', 'LLTC', 'KEYS', 'RHT', 'ULTI']
+    exempt_list = ['MELI', 'GENZ', 'FRX', 'HSP', 'AGN1', 'BXLT', 'MEDI', 'ETEK1', 'DNA', 'PNU', 'SDS1', 'LLTC',
+                   'KEYS', 'RHT', 'ULTI', 'BIVV', 'CELG']
 
     # Buy logic
     if len(position_list) < 25:
         for stock in interested_assets.index.values:
             # if stock not in position_list and stock not in stop_list and stock.exchange in ('NASDAQ', 'NYSE'):
             if stock not in position_list and stock not in stop_list and stock.symbol not in exempt_list:
-
-                # Condition 1
-                # avg_vol = data.history(stock, 'volume', 50, '1d').mean()
-                # if avg_vol < 10000:
-                #     continue
                 try:
                     avg_vol = data.history(stock, 'volume', 52, '1d')[:-2].mean()
                     min_vol = data.history(stock, 'volume', 52, '1d')[:-2].min()
@@ -189,13 +185,6 @@ def rebalance(context, data):
                     continue
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
-
-                # # Condition 2
-                # month_old_price = data.history(stock, 'close', 22, '1d')
-                # monthly_gain_loss = float(
-                #     "{0:.2f}".format((month_old_price[-1] - month_old_price[0]) * 100 / month_old_price[0]))
-                # if monthly_gain_loss < -5:
-                #     continue
 
                 sector = interested_assets.loc[stock].sector
                 quantity = get_quantity(context.portfolio.portfolio_value,
