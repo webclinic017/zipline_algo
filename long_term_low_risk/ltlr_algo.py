@@ -329,7 +329,7 @@ if __name__ == '__main__':
               'algo_id': config.get('id'),
               'benchmark_symbol': config.get('benchmark_symbol')}
 
-    if args.live_mode == 'True':
+    if args.live_mode == 'ib':
         if os.path.exists('test.state'):
             os.remove('test.state')
         print("Running in live mode.")
