@@ -4,6 +4,7 @@ import pandas as pd
 import argparse
 from virtual_broker_sample_ltlr_algo.vb_sample_config import config
 from utils.algo_utils import get_run_mode
+import utils.api_connector as api_conn
 
 data = None
 
@@ -22,10 +23,10 @@ def analyze(context, data):
 
 
 def before_trading_start(context, data):
-    # PriceFetcher(data)
     stock = symbol('AAPL')
     # price = data.current(stock, 'price')
-    print("Aapl price is {}")
+    price = api_conn.get_price(stock.sid)
+    print("Aapl price is {}".format(price))
 
 
 def after_trading_end(context, data):

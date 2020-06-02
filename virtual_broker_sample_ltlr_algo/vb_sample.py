@@ -11,7 +11,7 @@ from zipline.pipeline import Pipeline
 import numpy as np
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, pipeline_output, schedule_function)
-from utils.api_connector import (order_target_percent, order_target)
+from utils.order_controller import (order_target_percent, order_target)
 from utils.log_utils import setup_logging
 from utils.algo_utils import get_run_mode
 from virtual_broker_sample_ltlr_algo.vb_sample_config import config
