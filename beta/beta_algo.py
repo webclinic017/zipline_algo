@@ -23,8 +23,8 @@ def initialize(context):
 
     # etf stock
     context.shorting_on = True
-    context.long_stock = symbol('IVV')
-    context.short_stock = symbol('SH')
+    context.longStock = symbol('IVV')
+    context.shortStock = symbol('SH')
 
     if context.live_trading is False:
         schedule_function(
@@ -73,14 +73,14 @@ def rebalance(context, data):
 
 def go_inverse(context):
     context.shorting_on = True
-    order_target_percent(context.long_stock, 0)
-    order_target_percent(context.short_stock, 1)
+    order_target_percent(context.longStock, 0)
+    order_target_percent(context.shortStock, 1)
 
 
 def go_straight(context):
     context.shorting_on = False
-    order_target_percent(context.short_stock, 0)
-    order_target_percent(context.long_stock, 1)
+    order_target_percent(context.shortStock, 0)
+    order_target_percent(context.longStock, 1)
 
 
 def handle_data(context, data):
@@ -154,7 +154,7 @@ if __name__ == '__main__':
               'analyze': analyze,
               'before_trading_start': before_trading_start,
               'after_trading_end': after_trading_end,
-              'bundle': 'quandl',
+              'bundle': 'custom-csvdir-bundle',
               'capital_base': config.get('capital_base'),
               'algo_name': config.get('name'),
               'algo_id': config.get('id'),

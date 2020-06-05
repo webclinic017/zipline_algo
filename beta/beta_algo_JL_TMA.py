@@ -3,11 +3,22 @@
 # --------------------------------------------------------------------------------------------------
 # Module Imports
 
+# todo: interactive brokers tick data
+# todo: write function to download, process, and register custom-csvdir-bundle
+# todo: ask Denis for other strategy logic (going short, etc)
+
+# todo: csv headers:
+# todo:  date	  open	  high	   low	  close	  volume    dividend	split
+# todo: 8/1/2007  124.36  125.46  122.88  123.26   264550   	0	        1
+
+
+
 import inspect
 import logging
 import os
 import sys
 import warnings
+import argparse
 from functools import reduce
 from datetime import datetime as dt
 import pandas as pd
@@ -19,6 +30,9 @@ from zipline.finance.cancel_policy import EODCancel
 
 import matplotlib.pyplot as plt
 from matplotlib import style
+
+from modified_beta_strategy import Strategy
+
 style.use('fivethirtyeight')
 
 from beta.beta_config import config
@@ -30,6 +44,13 @@ from functools import partial
 warnings.simplefilter(action='ignore',category = UserWarning)
 
 # quandl_api_key='PPzVtduYsyxVgf9z1WGo'
+
+
+# todo:
+# Ending Cash
+# plot MAs and trades
+# look at SH borrow rate
+# download and use minute data for SPY / SH
 
 
 # --------------------------------------------------------------------------------------------------
@@ -59,7 +80,7 @@ LOG_FILE_NAME = os.path.basename(__file__) + '.log'
 
 def initialize(context):
 
-    set_benchmark(symbol("SPY2"))
+    set_benchmark(symbol("SPY"))
 
     set_cancel_policy(EODCancel())
     # set_max_order_count(1)
@@ -69,8 +90,8 @@ def initialize(context):
     context.longSpread = False
     context.shortSpread = False
 
-    context.longStock = symbol('SH2')
-    context.shortStock = symbol('SPY2')
+    context.longStock = symbol('MSFT')
+    context.shortStock = symbol('AAPL')
     #
     # schedule_function(fnTripleMovingAverageCrossover,
     #                   date_rules.every_day(),
@@ -141,7 +162,7 @@ def handle_data(context, data):
             elif context.shortSpread:
                 lastClose = data.current(SPY, 'close')
                 entryPrice = context.portfolio.positions[0].cost_basis
-                bpv =  3000/250
+                bpv =  3000/ bigPointValue
 
                 # pos=context.metrics_tracker.positions
                 # entryPrice = pos[0].inner_position.cost_basis
@@ -194,7 +215,7 @@ def fnTripleMovingAverageCrossover(context, data):
             logging.info('ma49: %s crossed above ma194: %s' % (shortSMA, medSMA))
             logging.info('----- LONG ORDER PLACED -----')
 
-            order_target_percent(SH, -1.0)
+            order_target_percent(SH, -1.5)
             # order_target_percent(SPY, 0.0)
 
             openOrders = get_open_orders()
@@ -314,10 +335,10 @@ def analyze(context, perf):
             label='portfolio_value',
             linewidth=2.5)
 
-    ax.plot(perf.ending_cash,
+    # ax.plot(perf.ending_cash,
             # c='r',
-            label='ending_cash',
-            linewidth=1.0)
+            # label='ending_cash',
+            # linewidth=1.0)
 
     # perf.portfolio_value.plot(ax=ax)
     # perf.ending_cash.plot(ax=ax2)
@@ -414,80 +435,63 @@ def analyze(context, perf):
 
 
 # --------------------------------------------------------------------------------------------------
-# register csv
-
-# import pandas as pd
-# from zipline.data.bundles import register
-# from zipline.data.bundles.csvdir import csvdir_equities
-# start_session = pd.Timestamp('2007-8-1', tz='utc')
-# end_session = pd.Timestamp('2020-5-1', tz='utc')
-# register(
-#     'custom-csvdir-bundle',
-#     csvdir_equities(
-#         ['daily'],
-#         'C:/Users/jloss/PyCharmProjects/zipline_algo/beta/data',
-#     ),
-#     calendar_name='NYSE', # US equities
-#     start_session=start_session,
-#     end_session=end_session
-# )
-# zipline.data.bundles.ingest('custom-csvdir-bundle')
-# zipline.data.bundles.ingestions_for_bundle('custom-csvdir-bundle')
-# import zipline
-# zipline.bundles
-# from zipline.data.bundles import ingest, csvdir
-# import zipline.data.bundles as zdb
-# zdb.bundles
-
-
-
-# --------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------
 # run main
 
 if __name__ == '__main__':
 
-    setPandas()
-    setLogging(LOGGING_DIRECTORY, LOG_FILE_NAME, level='INFO')
+    start_date = pd.to_datetime(config.get('start_date'), format='%Y%m%d').tz_localize('UTC')
+    end_date = pd.to_datetime(config.get('end_date'), format='%Y%m%d').tz_localize('UTC')
 
-    start_date = pd.to_datetime(config.get('start_date'), format = '%Y%m%d').tz_localize('UTC')
-    end_date = pd.to_datetime(config.get('end_date'), format = '%Y%m%d').tz_localize('UTC')
+    parser = argparse.ArgumentParser(description='live mode.')
+    parser.add_argument('--live_mode', help='True for live mode')
+    args = parser.parse_args()
+
+    kwargs = {'start': start_date,
+              'end': end_date,
+              'initialize': initialize,
+              'handle_data': handle_data,
+              'analyze': analyze,
+              # 'before_trading_start': before_trading_start,
+              # 'after_trading_end': after_trading_end,
+              'bundle': 'custom-csvdir-bundle',
+              'bundle': 'quandl',
+              'capital_base': config.get('capital_base'),
+              'algo_name': config.get('name'),
+              'algo_id': config.get('id'),
+              'benchmark_symbol': config.get('benchmark_symbol')}
+
+    if args.live_mode == 'True':
+        if os.path.exists('test.state'):
+            os.remove('test.state')
+        print("Running in live mode.")
+        kwargs['tws_uri'] = 'localhost:7497:1232'
+        kwargs['live_trading'] = True
+    else:
+        kwargs['live_trading'] = False
+
+    strategy = Strategy(kwargs)
+    strategy.run_algorithm()
+
+    if args.live_mode != 'True':
+        input("Press any key to exit")
 
 
-    try:
-        perf = zipline.run_algorithm(start = start_date,
-                                     end = end_date,
-                                     initialize = initialize,
-                                     analyze = analyze,
-                                     capital_base = config.get('capital_base'),
-                                     handle_data = handle_data,
-                                     bundle = 'custom-csvdir-bundle',
-                                     # bundle = 'quandl',
-                                     # metrics_set = 'default',
-                                     # blotter = zipline.finance.blotter.SimulationBlotter(cancel_policy = EODCancel)
-                                     )
-
-        perf.to_csv('perf.csv')
 
 
-
-
-        # --------------------------------------------------------------------------------------------------
-        # end program
-
-        logging.info("========== END PROGRAM ==========")
-        logging.info('\nEnding portfolio statistics:\n%s' % perf.loc[perf.index[-1]])
-        logging.info('\nLarge negative returns:\n%s' % perf.loc[perf.returns<-.10]['returns'])
-
-
-
-
-
-    except Exception as e:
-        logging.error(str(e), exc_info = True)
-
-# CLOSE LOGGING
-for handler in logging.root.handlers:
-    handler.close()
-
-logging.shutdown()
+# # --------------------------------------------------------------------------------------------------
+# # end program
+#
+#     logging.info("========== END PROGRAM ==========")
+#     logging.info('\nEnding portfolio statistics:\n%s' % perf.loc[perf.index[-1]])
+#     logging.info('\nLarge negative returns:\n%s' % perf.loc[perf.returns <- .10]['returns'])
+#
+#
+#     except Exception as e:
+#         logging.error(str(e), exc_info = True)
+#
+# # CLOSE LOGGING
+# for handler in logging.root.handlers:
+#     handler.close()
+#
+# logging.shutdown()
