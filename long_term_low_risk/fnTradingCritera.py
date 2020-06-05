@@ -39,7 +39,7 @@ def setPandas():
             'precision': 2,
             'float_format': '{:,.2f}'.format,
             # 'max_seq_items': 50,         # Max length of printed sequence
-            'expand_frame_repr': False,  # Don't wrap to multiple pages
+            'expand_frame_repr': True,  # Don't wrap to multiple pages
             # 'show_dimensions': False
         },
         'mode': {
@@ -170,7 +170,7 @@ def fnFilterInsiderTransactions(dfIT, pctTraded = 10.0, side = 'B', tPeriod=7, t
     if side == 'B':
         df = df.loc[df['pctSharesBotSld'] >= pctTraded]
     elif side == 'S':
-        df = df.loc[df['pctSharesBotSld'] <= pctTraded]
+        df = df.loc[df['pctSharesBotSld'] <= -pctTraded]
     else:
         df = df.loc[df['pctSharesBotSld'] >= abs(pctTraded)]
 

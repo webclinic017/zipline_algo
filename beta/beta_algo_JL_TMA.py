@@ -90,8 +90,8 @@ def initialize(context):
     context.longSpread = False
     context.shortSpread = False
 
-    context.longStock = symbol('MSFT')
-    context.shortStock = symbol('AAPL')
+    context.longStock = symbol('SH')
+    context.shortStock = symbol('SPY')
     #
     # schedule_function(fnTripleMovingAverageCrossover,
     #                   date_rules.every_day(),

@@ -27,7 +27,7 @@ from datetime import datetime as dt
 
 sys.path.append('C:\zipline_algo\long_term_low_risk')
 from long_term_low_risk.fnTradingCritera import setPandas, linreg, \
-    fnFilterInsiderTransactions, fnProcessInsiderTrades, fnGetSpyReturns
+    fnFilterInsiderTransactions, fnGetSpyReturns
 
 
 # ----------------------------------------------------------------------------------
@@ -107,11 +107,12 @@ def make_pipeline():
             'yoy_sales': fd.yoy_sales,
             'qoq_earnings': fd.qoq_earnings,
             'sector': sectors,
+            # 'filingdate': td.Date,
             'sharesownedbeforetransaction': td.sharesownedbeforetransaction,
             'transactionshares': td.transactionshares,
             'sharesownedfollowingtransaction': td.sharesownedfollowingtransaction,
-            'pctSharesBotSld': td.pctSharesBotSld,
-            'dDiffInt': td.dDiffInt
+            # 'pctSharesBotSld': td.pctSharesBotSld,
+            # 'dDiffInt': td.dDiffInt
         },
     )
 
@@ -156,6 +157,9 @@ def rebalance(context, data):
     # 5. should have invested more than or equal 6% of total revenue in RND
     # 6. net income should be positive
     # 7. should not have a decrease in earnings
+    # 8. insider transactions
+
+
     interested_assets = interested_assets.query("marketcap > 10000000000 "
                                                 "and liabilities < 180000000000 "
                                                 "and (yoy_sales >= 0.03 or yoy_sales != yoy_sales)"
@@ -203,6 +207,48 @@ def rebalance(context, data):
 
             pctChg = (uPrc - uPrcPr) / uPrcPr
             return pctChg * 100
+
+
+        # def fnCalcInsiderTrades(stock=stock, pctTraded = 10.0, side = None, tPeriod=7, tUnit='d'):
+        def fnCalcInsiderTrades(stock=stock, pctTraded = 10.0, side = None):
+
+            # timeDelta (filter on dates)
+            # tDelta = pd.to_timedelta(tPeriod, unit=tUnit)
+
+            df = interested_assets.loc[interested_assets.index==stock]
+
+            postShares = df['sharesownedfollowingtransaction']
+            preShares = df['sharesownedbeforetransaction']
+            # trdShares = df['transactionshares']
+
+            df['pctSharesBotSld'] = ((postShares - preShares) / preShares) * 100
+
+            # choose bought, sold, or either
+            if side == 'B':
+                pct = df.loc[df['pctSharesBotSld'] >= pctTraded]
+            elif side == 'S':
+                pct = df.loc[df['pctSharesBotSld'] <= -pctTraded]
+            elif side is None:
+                pct = df.loc[abs(df['pctSharesBotSld']) >= pctTraded]
+
+            if not pct.empty:
+                return pct
+
+
+            # return pct
+            #
+            # # return stock tickers
+            # tickers = list(pct.index.values)
+            # pct.index.name = 'ticker'
+            #
+            # # convert equity objects to ticker symbols
+            # print('\n Tickers that match insider trading criteria: \n %s' % pct)
+            # symbols = []
+            # for i in tickers:
+            #     symbols.append(i.symbol)
+            #
+            # return symbols
+
 
         # calculates historical alpha and beta over the last 252 trading days
         def calc_alpha_and_beta(stock, rSPY, tPeriod = 1, tUnit = 'Y'):
@@ -266,7 +312,6 @@ def rebalance(context, data):
                 if (price * min_vol) < 10000 or (price * avg_vol) < 20000:
                     continue
 
-
                 # # Condition 2
                 # month_old_price = data.history(stock, 'close', 22, '1d')
                 # monthly_gain_loss = float(
@@ -274,8 +319,8 @@ def rebalance(context, data):
                 # if monthly_gain_loss < -5:
                 #     continue
 
-
                 # Condition 3 & 4: Price Drops larger than -10% | Price Returns > 5%
+                # if (calc_price_returns(time_period = 7) <= -10.0) | (calc_price_returns(time_period = 7) >= 5.0):  # pct
                 if (calc_price_returns(time_period = 7) <= -10.0) | (calc_price_returns(time_period = 7) >= 5.0):  # pct
                     continue
 
@@ -284,6 +329,15 @@ def rebalance(context, data):
                 if (alpha >= -0.000001) & (beta >= 0.50):        # using both parameters at the same time
                     continue
 
+                # Condition 6: Insider Transactions
+                # tickers = fnCalcInsiderTrades(stock, pctTraded=10.0, side=None, tPeriod=7, tUnit='d')
+                pct = fnCalcInsiderTrades(stock, pctTraded = 10.0, side = None)
+                if pct:
+                    continue
+                else:
+                    break
+                # if stock.symbol in tickers:
+                #     continue
 
 
                 sector = interested_assets.loc[stock].sector
