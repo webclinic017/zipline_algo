@@ -14,7 +14,7 @@ from zipline.api import (attach_pipeline, pipeline_output, schedule_function)
 from utils.order_controller import (order_target_percent, order_target)
 from utils.log_utils import setup_logging
 from utils.algo_utils import get_run_mode
-from virtual_broker_sample_ltlr_algo.vb_sample_config import config
+from algos.virtual_broker_sample_ltlr_algo.vb_sample_config import config
 import argparse
 import pickle
 import time

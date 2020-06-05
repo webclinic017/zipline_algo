@@ -12,7 +12,7 @@ import numpy as np
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function, symbol)
 from utils.log_utils import setup_logging
-from highrisk_algo.highrisk_config import config
+from algos.highrisk_algo.highrisk_config import config
 import argparse
 import os
 import pickle

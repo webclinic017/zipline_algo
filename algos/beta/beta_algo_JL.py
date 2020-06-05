@@ -12,7 +12,7 @@ import zipline
 import argparse
 import os
 import time
-from beta.beta_config import config
+from algos.beta.beta_config import config
 import numpy as np
 # import talib as ta
 import pandas as pd

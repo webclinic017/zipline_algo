@@ -2,7 +2,7 @@ from zipline.api import symbol
 from strategy import Strategy
 import pandas as pd
 import argparse
-from virtual_broker_sample_ltlr_algo.vb_sample_config import config
+from algos.virtual_broker_sample_ltlr_algo.vb_sample_config import config
 from utils.algo_utils import get_run_mode
 import utils.api_connector as api_conn
 

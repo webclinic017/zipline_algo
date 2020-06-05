@@ -35,7 +35,7 @@ from modified_beta_strategy import Strategy
 
 style.use('fivethirtyeight')
 
-from beta.beta_config import config
+from algos.beta.beta_config import config
 from fnCommon import setLogging
 from fnTradingCritera import setPandas
 from datetime import timedelta

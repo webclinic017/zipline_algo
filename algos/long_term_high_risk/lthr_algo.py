@@ -12,7 +12,7 @@ import datetime
 from zipline.utils.events import date_rules
 from zipline.api import (attach_pipeline, order_target_percent, order_target, pipeline_output, schedule_function)
 from utils.log_utils import setup_logging
-from long_term_high_risk.lthr_config import config
+from algos.long_term_high_risk.lthr_config import config
 import argparse
 import pickle
 import time
