@@ -6,13 +6,13 @@ class Broker(ABC):
         super().__init__()
 
     @abstractmethod
-    def pull_portfolio(self):
+    def get_portfolio(self, context):
         pass
 
-    @abstractmethod
-    def order_target_percent(self):
-        pass
-
-    @abstractmethod
-    def order_target(self):
-        pass
+    # @abstractmethod
+    # def order_target_percent(self):
+    #     pass
+    #
+    # @abstractmethod
+    # def order_target(self):
+    #     pass
